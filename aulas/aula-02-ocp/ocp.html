@@ -1,0 +1,1425 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOLID — Open-Closed Principle — CESURG</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #07090a;
+        --teal: #00a3b8;
+        --teal-dk: #005f73;
+        --gold: #c8952a;
+        --gold-lt: #e8aa3d;
+        --white: #ffffff;
+        --dim: rgba(255, 255, 255, 0.55);
+        --dim2: rgba(255, 255, 255, 0.28);
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-b: rgba(255, 255, 255, 0.08);
+        --true-c: #34d27a;
+        --false-c: #ff5c5c;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+
+      body.light-mode {
+        --bg: #f8fafc;
+        --teal: #0891b2;
+        --teal-dk: #164e63;
+        --gold: #b45309;
+        --gold-lt: #d97706;
+        --white: #0f172a;
+        --dim: #475569;
+        --dim2: #94a3b8;
+        --glass: rgba(15, 23, 42, 0.03);
+        --glass-b: rgba(15, 23, 42, 0.06);
+        --border: rgba(15, 23, 42, 0.08);
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--white);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: none;
+      }
+
+      /* ─── CUSTOM CURSOR ─── */
+      #cur-dot {
+        position: fixed;
+        width: 8px; height: 8px;
+        background: var(--white);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition: width 0.15s, height 0.15s, background 0.2s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-ring {
+        position: fixed;
+        width: 36px; height: 36px;
+        border: 1.5px solid rgba(255,255,255,0.5);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.4,0,0.2,1), height 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-glow {
+        position: fixed;
+        width: 180px; height: 180px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9997;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(0,163,184,0.12) 0%, rgba(0,163,184,0.04) 45%, transparent 70%);
+        transition: opacity 0.3s;
+        will-change: transform;
+      }
+      body.cur-hover #cur-dot { width: 6px; height: 6px; background: var(--teal); }
+      body.cur-hover #cur-ring { width: 52px; height: 52px; border-color: var(--teal); }
+      body.cur-click #cur-dot { width: 12px; height: 12px; background: var(--gold); }
+      body.cur-click #cur-ring { width: 22px; height: 22px; border-color: var(--gold); border-width: 2px; }
+      body.cur-nav #cur-dot { width: 10px; height: 10px; background: var(--gold); }
+      body.cur-nav #cur-ring { width: 60px; height: 60px; border-color: var(--gold); border-width: 2px; }
+
+      body.light-mode #cur-dot { background: var(--teal); }
+      body.light-mode #cur-ring { border-color: rgba(15,23,42,0.4); }
+      body.light-mode #footer { background: rgba(248,250,252,0.92); border-top: 1px solid var(--border); }
+      body.light-mode .dbg { background: #f1f5f9; border-color: rgba(15,23,42,0.12); }
+      body.light-mode .dbg-bar { background: rgba(8,145,178,0.06); border-bottom-color: rgba(15,23,42,0.08); }
+      body.light-mode .dbg-label { color: var(--teal); }
+      body.light-mode .dbg-dot { background: var(--teal); }
+      body.light-mode .dbg-step-info { color: var(--dim); }
+      body.light-mode .dbg-btn { border-color: rgba(15,23,42,0.15); color: var(--dim); background: transparent; }
+      body.light-mode .dbg-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+      body.light-mode .dbg-btn.run { background: var(--teal); border-color: var(--teal); color: #fff; }
+      body.light-mode .dbg-content { color: #1e4e6a; }
+      body.light-mode .dbg-lnum { color: rgba(15,23,42,0.25); }
+      body.light-mode .dbg-line.active { background: rgba(180,83,9,0.08); }
+      body.light-mode .dbg-line.active .dbg-lnum { color: var(--gold); }
+      body.light-mode .dbg-line.active .dbg-arr { color: var(--gold); }
+      body.light-mode .dbg-exp { background: rgba(180,83,9,0.04); border-top-color: rgba(15,23,42,0.08); color: var(--dim); }
+      body.light-mode .dbg-exp strong { color: #0f172a; }
+      body.light-mode .dbg-exp em { color: var(--teal); }
+      body.light-mode .dbg-dots span { background: rgba(15,23,42,0.15); }
+      body.light-mode .dbg-dots span.on { background: var(--gold); }
+      body.light-mode .kw { color: #0369a1; }
+      body.light-mode .str { color: #15803d; }
+      body.light-mode .op { color: #b45309; }
+      body.light-mode .cm { color: #94a3b8; }
+      body.light-mode .nbtn { border-color: var(--border); color: var(--dim); }
+      body.light-mode .nbtn:hover { border-color: var(--teal); color: var(--teal); }
+      body.light-mode .f-count { color: var(--dim); }
+      body.light-mode .f-name .l1 { color: var(--dim); }
+      body.light-mode .f-name .l2 { color: var(--gold); }
+      body.light-mode .f-sep { background: var(--border); }
+      body.light-mode .f-bar { background: var(--teal-dk); opacity: 0.15; }
+      body.light-mode .code { background: rgba(15,23,42,0.05); border-color: rgba(15,23,42,0.1); color: #1e4e6a; }
+
+      button, a, [onclick], input, select, textarea { cursor: none; }
+
+      /* ─── PROGRESS ─── */
+      #prog {
+        position: fixed; top: 0; left: 0; height: 2px;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+        z-index: 999;
+      }
+
+      /* ─── SLIDES ─── */
+      #deck {
+        width: 100%;
+        height: calc(100vh - 56px);
+        position: relative;
+        perspective: 1400px;
+        perspective-origin: 50% 45%;
+      }
+      .slide {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 36px 56px;
+        opacity: 0; pointer-events: none;
+        will-change: transform, opacity;
+      }
+      .slide.active { opacity: 1; pointer-events: all; transform: none; }
+
+      @keyframes kExitFwd {
+        from { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+        to   { opacity: 0; transform: translateX(-4%) scale(0.94) translateZ(-60px); }
+      }
+      @keyframes kEnterFwd {
+        from { opacity: 0; transform: translateX(5%) scale(0.96) translateZ(-30px); }
+        to   { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+      }
+      @keyframes kExitBwd {
+        from { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+        to   { opacity: 0; transform: translateX(4%) scale(0.94) translateZ(-60px); }
+      }
+      @keyframes kEnterBwd {
+        from { opacity: 0; transform: translateX(-5%) scale(0.96) translateZ(-30px); }
+        to   { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+      }
+      .anim-exit-fwd  { animation: kExitFwd  520ms cubic-bezier(0.22,1,0.36,1) forwards; }
+      .anim-exit-bwd  { animation: kExitBwd  520ms cubic-bezier(0.22,1,0.36,1) forwards; }
+      .anim-enter-fwd { animation: kEnterFwd 560ms cubic-bezier(0.22,1,0.36,1) forwards; pointer-events: all; }
+      .anim-enter-bwd { animation: kEnterBwd 560ms cubic-bezier(0.22,1,0.36,1) forwards; pointer-events: all; }
+
+      /* ─── FOOTER ─── */
+      #footer {
+        position: fixed; bottom: 0; left: 0; right: 0; height: 56px;
+        background: rgba(7,9,10,0.92);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 36px; z-index: 500;
+      }
+      .f-brand { display: flex; align-items: center; gap: 10px; }
+      .f-sep { width: 1px; height: 24px; background: var(--border); }
+      .f-name { line-height: 1.2; }
+      .f-name .l1 { font-size: 0.58rem; font-weight: 600; color: var(--dim2); letter-spacing: 1.5px; text-transform: uppercase; }
+      .f-name .l2 { font-size: 0.75rem; font-weight: 800; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+      .f-bar { flex: 1; height: 2px; background: var(--teal-dk); margin: 0 24px; border-radius: 1px; }
+      .f-nav { display: flex; align-items: center; gap: 10px; }
+      .f-count { font-size: 0.72rem; font-weight: 500; color: var(--dim2); min-width: 44px; text-align: center; }
+
+      .nbtn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 5px 16px; border-radius: 20px; cursor: pointer;
+        font-size: 0.78rem; font-weight: 600; font-family: inherit;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+      }
+      .nbtn:hover { border-color: var(--teal); color: var(--teal); }
+      .nbtn.p { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .nbtn.p:hover { background: var(--teal-dk); }
+
+      /* ─── TYPOGRAPHY ─── */
+      .eyebrow {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--teal); margin-bottom: 16px;
+      }
+      .hero {
+        font-size: clamp(3rem, 7vw, 6rem); font-weight: 800;
+        line-height: 1; text-align: center; letter-spacing: -0.03em;
+      }
+      .hero em { font-style: normal; color: var(--gold); }
+      .hero strong { color: var(--teal); }
+      .title {
+        font-size: clamp(1.8rem, 4vw, 3.2rem); font-weight: 700;
+        line-height: 1.1; text-align: center; letter-spacing: -0.02em;
+      }
+      .title em { font-style: normal; color: var(--gold); }
+      .title strong { color: var(--teal); }
+      .subtitle {
+        font-size: clamp(0.95rem, 1.8vw, 1.15rem); font-weight: 400;
+        color: var(--dim); line-height: 1.7; text-align: center;
+      }
+      .subtitle strong { color: var(--white); font-weight: 600; }
+
+      /* ─── GLASS CARD ─── */
+      .gc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 20px; padding: 28px 40px;
+        backdrop-filter: blur(8px); width: 100%; max-width: 920px;
+      }
+      .gc-sm { max-width: 640px; }
+      .gc-md { max-width: 780px; }
+
+      /* ─── DIVIDER ─── */
+      .line {
+        width: 40px; height: 2px; background: var(--gold);
+        border-radius: 1px; margin: 14px auto;
+      }
+
+      /* ─── GRID ─── */
+      .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 960px; }
+      .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; width: 100%; max-width: 1000px; }
+
+      /* ─── OP CARD ─── */
+      .oc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 16px; padding: 20px 18px; text-align: center;
+        transition: transform 0.25s, background 0.25s, border-color 0.25s;
+      }
+      .oc:hover { transform: translateY(-4px); background: var(--glass-b); }
+      .oc .sym { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+      .oc .nm { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: var(--white); }
+      .oc .ds { font-size: 0.78rem; color: var(--dim); line-height: 1.55; }
+
+      /* ─── CALLOUT ─── */
+      .callout {
+        border-left: 2px solid var(--teal); padding: 12px 18px; margin-top: 16px;
+        font-size: 0.88rem; color: var(--dim);
+        background: rgba(0,163,184,0.06); border-radius: 0 8px 8px 0;
+      }
+      .callout strong { color: var(--white); }
+      .callout-gold { border-left: 2px solid var(--gold); background: rgba(200,149,42,0.06); }
+      .callout-red { border-left: 2px solid var(--false-c); background: rgba(255,92,92,0.06); }
+
+      /* ─── CODE ─── */
+      .code {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 22px;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+        font-size: clamp(0.7rem, 1.3vw, 0.84rem);
+        white-space: pre; text-align: left; color: #a8d8e4;
+        line-height: 1.65; width: 100%;
+      }
+      .code-bad { border-color: rgba(255,92,92,0.3); box-shadow: 0 0 0 1px rgba(255,92,92,0.1); }
+      .code-good { border-color: rgba(52,210,122,0.3); box-shadow: 0 0 0 1px rgba(52,210,122,0.1); }
+      .kw  { color: #7ec8e3; }
+      .str { color: #a8d8b0; }
+      .op  { color: var(--gold-lt); }
+      .cm  { color: #4a6a74; }
+      .ann { color: #c3a6ff; }
+
+      /* ─── PILL ─── */
+      .pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+      .pt { background: rgba(52,210,122,0.12); color: var(--true-c); border: 1px solid rgba(52,210,122,0.25); }
+      .pf { background: rgba(255,92,92,0.12); color: var(--false-c); border: 1px solid rgba(255,92,92,0.25); }
+      .pa { background: rgba(0,163,184,0.12); color: var(--teal); border: 1px solid rgba(0,163,184,0.25); }
+      .pg { background: rgba(200,149,42,0.12); color: var(--gold-lt); border: 1px solid rgba(200,149,42,0.25); }
+
+      /* ─── STEP LIST ─── */
+      .step {
+        display: flex; align-items: flex-start; gap: 14px;
+        padding: 13px 0; border-bottom: 1px solid var(--border);
+      }
+      .step:last-child { border: none; }
+      .sn {
+        min-width: 30px; height: 30px; border-radius: 50%;
+        background: rgba(0,163,184,0.15); border: 1px solid rgba(0,163,184,0.3);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.82rem; color: var(--teal); flex-shrink: 0;
+      }
+      .sn-red { background: rgba(255,92,92,0.12); border-color: rgba(255,92,92,0.3); color: var(--false-c); }
+      .sn-green { background: rgba(52,210,122,0.12); border-color: rgba(52,210,122,0.3); color: var(--true-c); }
+
+      /* ─── BIG STAT ─── */
+      .big-stat { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+      .stat { text-align: center; }
+      .stat-val { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+      .stat-lbl { font-size: 0.78rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
+
+      /* ─── QUIZ ─── */
+      .qopt {
+        width: 100%; text-align: left; background: var(--glass); border: 1px solid var(--border);
+        border-radius: 10px; padding: 12px 18px; color: var(--dim);
+        font-size: 0.88rem; font-family: inherit; cursor: pointer; transition: all 0.2s;
+      }
+      .qopt:hover { border-color: var(--teal); color: var(--white); background: rgba(0,163,184,0.08); }
+      .qopt.ok { border-color: var(--true-c); background: rgba(52,210,122,0.1); color: var(--true-c); font-weight: 700; }
+      .qopt.no { border-color: var(--false-c); background: rgba(255,92,92,0.08); color: var(--false-c); }
+
+      /* ─── ICONS ─── */
+      .mi {
+        font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal;
+        font-size: 1.5rem; line-height: 1; letter-spacing: normal; text-transform: none;
+        display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+        -webkit-font-smoothing: antialiased; font-feature-settings: "liga"; vertical-align: middle;
+      }
+      .mi-sm { font-size: 1.1rem; }
+      .mi-lg { font-size: 2rem; }
+      .mi-xl { font-size: 3.5rem; }
+
+      /* ─── SOLID LETTERS ─── */
+      .solid-row {
+        display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+        width: 100%; max-width: 900px; margin: 20px 0;
+      }
+      .solid-card {
+        flex: 1; min-width: 120px; max-width: 160px;
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 14px; padding: 16px 12px; text-align: center;
+        transition: transform 0.2s;
+      }
+      .solid-card.highlight {
+        background: rgba(0,163,184,0.1); border-color: var(--teal);
+        box-shadow: 0 0 20px rgba(0,163,184,0.15);
+        transform: translateY(-6px) scale(1.03);
+      }
+      .solid-letter { font-size: 2.4rem; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+      .solid-name { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; color: var(--dim); line-height: 1.4; }
+
+      /* ─── COMPARE BOX ─── */
+      .cmp-box {
+        border-radius: 14px; padding: 18px 20px;
+        border: 1px solid var(--border); background: var(--glass);
+      }
+      .cmp-box .cmp-h {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; margin-bottom: 12px; display: flex;
+        align-items: center; gap: 8px;
+      }
+
+      /* ─── DEBUGGER ─── */
+      .dbg {
+        background: rgba(0,0,0,0.55); border: 1px solid var(--border);
+        border-radius: 14px; overflow: hidden; width: 100%;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+      }
+      .dbg-bar {
+        background: rgba(0,163,184,0.07); border-bottom: 1px solid var(--border);
+        padding: 8px 16px; display: flex; align-items: center;
+        justify-content: space-between; gap: 12px;
+      }
+      .dbg-label {
+        font-size: 0.62rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; color: var(--teal);
+        font-family: "Inter", sans-serif; display: flex; align-items: center; gap: 8px;
+      }
+      .dbg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: dbgpulse 1.4s ease-in-out infinite; }
+      @keyframes dbgpulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+      .dbg-step-info { font-size: 0.72rem; color: var(--dim2); font-family: "Inter", sans-serif; }
+      .dbg-controls { display: flex; gap: 6px; align-items: center; }
+      .dbg-btn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 4px 13px; border-radius: 6px; cursor: pointer;
+        font-size: 0.75rem; font-weight: 600; font-family: "Inter", sans-serif;
+        transition: all 0.15s; line-height: 1.5;
+      }
+      .dbg-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+      .dbg-btn:disabled { opacity: 0.22; cursor: default; }
+      .dbg-btn.run { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .dbg-btn.run:hover:not(:disabled) { background: var(--teal-dk); }
+      .dbg-code { padding: 8px 0; overflow-x: auto; }
+      .dbg-line { display: flex; align-items: center; min-height: 28px; transition: background 0.22s; }
+      .dbg-line.active { background: rgba(200,149,42,0.13); }
+      .dbg-lnum {
+        width: 38px; text-align: right; padding-right: 14px; font-size: 0.7rem;
+        color: rgba(255,255,255,0.18); flex-shrink: 0; transition: color 0.22s; line-height: 28px;
+      }
+      .dbg-line.active .dbg-lnum { color: var(--gold); }
+      .dbg-arr { width: 18px; flex-shrink: 0; color: var(--gold); font-size: 0.8rem; text-align: center; line-height: 28px; visibility: hidden; }
+      .dbg-line.active .dbg-arr { visibility: visible; }
+      .dbg-content { flex: 1; font-size: clamp(0.7rem, 1.2vw, 0.84rem); color: #a8d8e4; padding-right: 20px; white-space: pre; line-height: 28px; }
+      .dbg-exp {
+        border-top: 1px solid var(--border); background: rgba(200,149,42,0.055);
+        padding: 12px 20px; font-size: 0.86rem; color: var(--dim);
+        min-height: 52px; font-family: "Inter", sans-serif; line-height: 1.6; transition: opacity 0.25s;
+      }
+      .dbg-exp strong { color: var(--white); }
+      .dbg-exp em { color: var(--teal); font-style: normal; }
+      .dbg-dots { display: flex; align-items: center; gap: 5px; }
+      .dbg-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
+      .dbg-dots span.on { background: var(--gold); transform: scale(1.3); }
+
+      /* ─── ANALOGY ─── */
+      .ana-pair { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+      .ana-item { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 640px) {
+        .g2,.g3 { grid-template-columns: 1fr; }
+        .slide { padding: 20px 16px; }
+        #footer { padding: 0 16px; }
+        .f-bar { margin: 0 12px; }
+        .solid-row { gap: 6px; }
+        .solid-card { min-width: 90px; }
+        .solid-letter { font-size: 1.8rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cur-glow"></div>
+    <div id="cur-ring"></div>
+    <div id="cur-dot"></div>
+    <div id="prog"></div>
+
+    <div id="deck">
+
+      <!-- ══════════ S1 — CAPA ══════════ -->
+      <div class="slide active" id="s1">
+        <div class="eyebrow">Engenharia de Software · SOLID</div>
+        <span class="mi" style="font-size:5rem;color:var(--teal);margin-bottom:20px">extension</span>
+        <h1 class="hero">Princípio<br /><em>Aberto-Fechado</em></h1>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:480px;margin-top:10px">
+          <strong>Open-Closed Principle</strong> — o "O" do SOLID<br/>
+          Escreva código que <strong>cresce sem quebrar</strong>.
+        </p>
+      </div>
+
+      <!-- ══════════ S2 — O QUE É SOLID ══════════ -->
+      <div class="slide" id="s2">
+        <div class="eyebrow">Contexto</div>
+        <h2 class="title">O que é <strong>SOLID</strong>?</h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:600px;margin-bottom:20px">
+          SOLID é um conjunto de <strong>5 princípios</strong> para escrever código orientado a objetos
+          mais fácil de manter, extender e entender.
+        </p>
+        <div class="solid-row">
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">S</div>
+            <div class="solid-name">Single<br/>Responsibility</div>
+          </div>
+          <div class="solid-card highlight">
+            <div class="solid-letter" style="color:var(--teal)">O</div>
+            <div class="solid-name" style="color:var(--teal);font-weight:800">Open-Closed<br/>Principle</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">L</div>
+            <div class="solid-name">Liskov<br/>Substitution</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">I</div>
+            <div class="solid-name">Interface<br/>Segregation</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">D</div>
+            <div class="solid-name">Dependency<br/>Inversion</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:640px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">star</span>
+          Hoje focaremos no <strong>Open-Closed Principle</strong> — um dos mais importantes para evitar retrabalho.
+        </div>
+      </div>
+
+      <!-- ══════════ S3 — DEFINIÇÃO OCP ══════════ -->
+      <div class="slide" id="s3">
+        <div class="eyebrow">Definição</div>
+        <h2 class="title">O que é o <em>OCP</em>?</h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="text-align:center;padding:36px 40px">
+          <span class="mi mi-xl" style="color:var(--teal);margin-bottom:16px;display:block">format_quote</span>
+          <p style="font-size:clamp(1.1rem,2.2vw,1.5rem);font-weight:700;line-height:1.5;color:var(--white)">
+            Entidades de software devem ser<br/>
+            <span style="color:var(--true-c)">abertas para extensão</span><br/>
+            mas <span style="color:var(--gold)">fechadas para modificação</span>.
+          </p>
+          <p style="margin-top:16px;font-size:0.82rem;color:var(--dim)">— Bertrand Meyer, 1988 · popularizado por Robert C. Martin</p>
+        </div>
+        <div class="callout" style="max-width:640px;text-align:center;margin-top:16px">
+          <span class="mi mi-sm" style="color:var(--gold)">lightbulb</span>
+          Em outras palavras: <strong>adicione funcionalidades novas sem alterar o que já funciona</strong>.
+        </div>
+      </div>
+
+      <!-- ══════════ S4 — ABERTO PARA EXTENSÃO ══════════ -->
+      <div class="slide" id="s4">
+        <div class="eyebrow">Primeira Parte</div>
+        <h2 class="title"><span style="color:var(--true-c)">Aberto</span> para <strong>Extensão</strong></h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+          <div style="font-size:3rem;flex-shrink:0"><span class="mi" style="font-size:3.5rem;color:var(--true-c)">add_circle</span></div>
+          <div>
+            <p style="font-size:1rem;color:var(--white);font-weight:700;margin-bottom:10px">
+              Você pode <span style="color:var(--true-c)">adicionar novos comportamentos</span>.
+            </p>
+            <p style="font-size:0.9rem;color:var(--dim);line-height:1.7">
+              O sistema aceita crescer. É possível incluir novas funcionalidades,
+              novos tipos de dados, novas regras — <strong style="color:var(--white)">sem medo</strong>.
+            </p>
+            <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+              <span class="pill pt">+ Nova forma geométrica</span>
+              <span class="pill pt">+ Novo tipo de pagamento</span>
+              <span class="pill pt">+ Novo canal de notificação</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:640px">
+          <span class="mi mi-sm" style="color:var(--teal)">check_circle</span>
+          <strong>Extensão</strong> = criar classes novas, implementar interfaces, herdar de abstrações.
+          O código novo <em>se encaixa</em> no sistema existente.
+        </div>
+      </div>
+
+      <!-- ══════════ S5 — FECHADO PARA MODIFICAÇÃO ══════════ -->
+      <div class="slide" id="s5">
+        <div class="eyebrow">Segunda Parte</div>
+        <h2 class="title"><span style="color:var(--gold)">Fechado</span> para <strong>Modificação</strong></h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+          <div style="font-size:3rem;flex-shrink:0"><span class="mi" style="font-size:3.5rem;color:var(--gold)">lock</span></div>
+          <div>
+            <p style="font-size:1rem;color:var(--white);font-weight:700;margin-bottom:10px">
+              Você <span style="color:var(--gold)">não toca no código que já funciona</span>.
+            </p>
+            <p style="font-size:0.9rem;color:var(--dim);line-height:1.7">
+              Código testado e funcionando deve permanecer intocado.
+              Cada modificação = risco de <strong style="color:var(--false-c)">regressão</strong>
+              — bugs em algo que já estava certo.
+            </p>
+            <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+              <span class="pill pf">- Não editar if/else existente</span>
+              <span class="pill pf">- Não modificar switch antigo</span>
+              <span class="pill pf">- Não alterar lógica já testada</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:640px">
+          <span class="mi mi-sm" style="color:var(--gold)">warning</span>
+          Modificar código existente sem OCP é como <strong>reformar a fundação de um prédio</strong>
+          enquanto as pessoas ainda moram nele.
+        </div>
+      </div>
+
+      <!-- ══════════ S6 — AS DUAS PARTES JUNTAS ══════════ -->
+      <div class="slide" id="s6">
+        <div class="eyebrow">Resumo da Regra</div>
+        <h2 class="title">As <em>Duas Partes</em> Juntas</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:760px;margin-bottom:20px">
+          <div class="cmp-box" style="border-color:rgba(52,210,122,0.3);background:rgba(52,210,122,0.04)">
+            <div class="cmp-h" style="color:var(--true-c)">
+              <span class="mi mi-sm">add_circle</span> ABERTO para Extensão
+            </div>
+            <div class="step">
+              <div class="sn sn-green">1</div>
+              <div>
+                <p style="font-size:0.88rem;color:var(--white);font-weight:600">Novos comportamentos</p>
+                <p style="font-size:0.8rem;color:var(--dim)">Crie classes novas que implementam interfaces existentes</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="sn sn-green">2</div>
+              <div>
+                <p style="font-size:0.88rem;color:var(--white);font-weight:600">Sem medo</p>
+                <p style="font-size:0.8rem;color:var(--dim)">Adicionar é seguro — o sistema não quebra</p>
+              </div>
+            </div>
+          </div>
+          <div class="cmp-box" style="border-color:rgba(200,149,42,0.3);background:rgba(200,149,42,0.04)">
+            <div class="cmp-h" style="color:var(--gold-lt)">
+              <span class="mi mi-sm">lock</span> FECHADO para Modificação
+            </div>
+            <div class="step">
+              <div class="sn" style="background:rgba(200,149,42,0.12);border-color:rgba(200,149,42,0.3);color:var(--gold-lt)">1</div>
+              <div>
+                <p style="font-size:0.88rem;color:var(--white);font-weight:600">Código estável</p>
+                <p style="font-size:0.8rem;color:var(--dim)">Classes já testadas não precisam mudar</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="sn" style="background:rgba(200,149,42,0.12);border-color:rgba(200,149,42,0.3);color:var(--gold-lt)">2</div>
+              <div>
+                <p style="font-size:0.88rem;color:var(--white);font-weight:600">Sem regressão</p>
+                <p style="font-size:0.8rem;color:var(--dim)">Bugs novos não aparecem em código antigo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:760px;text-align:center">
+          <strong>A magia:</strong> extensão e estabilidade ao mesmo tempo — graças a <strong>interfaces e polimorfismo</strong>.
+        </div>
+      </div>
+
+      <!-- ══════════ S7 — ANALOGIA ══════════ -->
+      <div class="slide" id="s7">
+        <div class="eyebrow">Analogia do Mundo Real</div>
+        <h2 class="title">Como um <em>Smartphone</em></h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:560px;margin-bottom:24px">
+          Seu celular <strong>não muda</strong> quando você instala um novo app.<br/>
+          Mas sua funcionalidade <strong>se expande</strong> sem limite.
+        </p>
+        <div class="g3" style="max-width:820px">
+          <div class="oc" style="border-top:2px solid var(--true-c)">
+            <span class="mi mi-lg" style="color:var(--true-c);margin-bottom:8px">install_mobile</span>
+            <div class="nm">Instalar App</div>
+            <div class="ds">Nova funcionalidade <strong style="color:var(--true-c)">sem modificar</strong> o sistema operacional</div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--teal)">
+            <span class="mi mi-lg" style="color:var(--teal);margin-bottom:8px">electrical_services</span>
+            <div class="nm">Tomada USB</div>
+            <div class="ds">Qualquer dispositivo <strong style="color:var(--teal)">se encaixa</strong> na mesma interface padrão</div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--gold)">
+            <span class="mi mi-lg" style="color:var(--gold-lt);margin-bottom:8px">power</span>
+            <div class="nm">Plug Elétrico</div>
+            <div class="ds">A tomada não muda para cada eletrodoméstico — o <strong style="color:var(--gold-lt)">plugue se adapta</strong></div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:760px;text-align:center;margin-top:4px">
+          Em código: a <strong>interface é a tomada</strong> — fixa e estável. As implementações são os <strong>plugues</strong> — livres para variar.
+        </div>
+      </div>
+
+      <!-- ══════════ S8 — CENÁRIO DO PROBLEMA ══════════ -->
+      <div class="slide" id="s8">
+        <div class="eyebrow">Vamos ao Código</div>
+        <h2 class="title">O <em>Cenário</em> do Exemplo</h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:580px;margin-bottom:20px">
+          Imagine um sistema que <strong>calcula a área</strong> de formas geométricas.
+          Começamos com círculo e retângulo. Depois precisamos de triângulo...
+        </p>
+        <div class="g3" style="max-width:820px">
+          <div class="oc">
+            <span class="mi mi-lg" style="color:var(--teal);margin-bottom:8px">circle</span>
+            <div class="nm">Círculo</div>
+            <div class="ds" style="font-family:monospace;color:var(--teal)">π × r²</div>
+          </div>
+          <div class="oc">
+            <span class="mi mi-lg" style="color:var(--gold-lt);margin-bottom:8px">rectangle</span>
+            <div class="nm">Retângulo</div>
+            <div class="ds" style="font-family:monospace;color:var(--gold-lt)">largura × altura</div>
+          </div>
+          <div class="oc" style="border-style:dashed;opacity:0.6">
+            <span class="mi mi-lg" style="color:var(--dim);margin-bottom:8px">change_history</span>
+            <div class="nm" style="color:var(--dim)">Triângulo</div>
+            <div class="ds" style="font-family:monospace;color:var(--dim)">(base × altura) / 2</div>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:760px;text-align:center;margin-top:12px">
+          <span class="mi mi-sm" style="color:var(--gold)">question_mark</span>
+          Como adicionar triângulo sem quebrar o que já existe? A resposta depende de como você projetou o sistema.
+        </div>
+      </div>
+
+      <!-- ══════════ S9 — CÓDIGO SEM OCP ══════════ -->
+      <div class="slide" id="s9">
+        <div class="eyebrow">Problema — Sem OCP</div>
+        <h2 class="title"><span style="color:var(--false-c)">Violando</span> o Princípio</h2>
+        <div class="line"></div>
+        <div class="code code-bad" style="max-width:720px;font-size:clamp(0.68rem,1.2vw,0.82rem)"><span class="cm">// ❌ SEM OCP — Cada nova forma MODIFICA este arquivo!</span>
+<span class="kw">public class</span> CalculadoraArea {
+
+  <span class="kw">public double</span> calcular(<span class="kw">String</span> tipo, <span class="kw">double</span> a, <span class="kw">double</span> b) {
+
+    <span class="kw">if</span> (tipo.equals(<span class="str">"circulo"</span>)) {
+      <span class="kw">return</span> Math.PI <span class="op">*</span> a <span class="op">*</span> a;        <span class="cm">// a = raio</span>
+
+    } <span class="kw">else if</span> (tipo.equals(<span class="str">"retangulo"</span>)) {
+      <span class="kw">return</span> a <span class="op">*</span> b;                    <span class="cm">// a = largura, b = altura</span>
+
+    } <span class="cm">// ← Para triângulo: EDITAR AQUI! Risco de bug!</span>
+
+    <span class="kw">return</span> 0;
+  }
+}</div>
+        <div class="callout callout-red" style="max-width:720px;margin-top:12px">
+          <span class="mi mi-sm" style="color:var(--false-c)">error</span>
+          Para adicionar triângulo, você <strong>abre este arquivo e edita</strong> o método.
+          Código que funcionava pode <strong>quebrar</strong>.
+        </div>
+      </div>
+
+      <!-- ══════════ S10 — O PROBLEMA REVELADO ══════════ -->
+      <div class="slide" id="s10">
+        <div class="eyebrow">O Diagnóstico</div>
+        <h2 class="title">Por que isso é um <em>Problema</em>?</h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <div class="step">
+            <div class="sn sn-red">1</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Cada nova forma = modificar código existente</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Triângulo, losango, hexágono... todo novo tipo exige abrir e editar <code style="color:var(--teal)">CalculadoraArea</code>.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">2</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Risco de regressão a cada mudança</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Um erro de digitação pode quebrar o cálculo do círculo que já estava perfeito.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">3</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Método cresce infinitamente</p>
+              <p style="font-size:0.82rem;color:var(--dim)">10 formas = 10 if/else. 50 formas = método ilegível. Manutenção vira pesadelo.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">4</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Dependência de String para identificar tipo</p>
+              <p style="font-size:0.82rem;color:var(--dim)"><code style="color:var(--false-c)">"Circulo"</code> vs <code style="color:var(--false-c)">"circulo"</code> — um erro silencioso retorna 0 sem avisar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S11 — INTERFACE FORMA ══════════ -->
+      <div class="slide" id="s11">
+        <div class="eyebrow">Solução com OCP — Passo 1</div>
+        <h2 class="title">Criar a <strong>Interface</strong> <em>Forma</em></h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:560px;margin-bottom:16px">
+          A interface define um <strong>contrato</strong>: toda forma geométrica
+          deve saber calcular sua própria área.
+        </p>
+        <div class="code code-good" style="max-width:680px"><span class="cm">// ✅ Interface = contrato imutável</span>
+<span class="kw">public interface</span> Forma {
+
+  <span class="kw">double</span> calcularArea();
+  <span class="cm">// Toda classe que implementar Forma</span>
+  <span class="cm">// DEVE fornecer este método.</span>
+}</div>
+        <div class="callout" style="max-width:680px;margin-top:12px">
+          <span class="mi mi-sm" style="color:var(--teal)">contract</span>
+          A interface <strong>nunca muda</strong>. Ela é o ponto estável do sistema — a
+          <em>"tomada"</em> que aceita qualquer plugue.
+        </div>
+      </div>
+
+      <!-- ══════════ S12 — IMPLEMENTAÇÕES ══════════ -->
+      <div class="slide" id="s12">
+        <div class="eyebrow">Solução com OCP — Passo 2</div>
+        <h2 class="title">Cada Forma <strong>Implementa</strong> o Contrato</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px">
+          <div class="code code-good" style="font-size:clamp(0.66rem,1.1vw,0.78rem)"><span class="kw">public class</span> Circulo <span class="kw">implements</span> Forma {
+  <span class="kw">private double</span> raio;
+
+  <span class="kw">public</span> Circulo(<span class="kw">double</span> raio) {
+    <span class="kw">this</span>.raio <span class="op">=</span> raio;
+  }
+
+  <span class="ann">@Override</span>
+  <span class="kw">public double</span> calcularArea() {
+    <span class="kw">return</span> Math.PI <span class="op">*</span> raio <span class="op">*</span> raio;
+  }
+}</div>
+          <div class="code code-good" style="font-size:clamp(0.66rem,1.1vw,0.78rem)"><span class="kw">public class</span> Retangulo <span class="kw">implements</span> Forma {
+  <span class="kw">private double</span> largura, altura;
+
+  <span class="kw">public</span> Retangulo(<span class="kw">double</span> l, <span class="kw">double</span> h) {
+    largura <span class="op">=</span> l; altura <span class="op">=</span> h;
+  }
+
+  <span class="ann">@Override</span>
+  <span class="kw">public double</span> calcularArea() {
+    <span class="kw">return</span> largura <span class="op">*</span> altura;
+  }
+}</div>
+        </div>
+        <div class="callout" style="max-width:900px;margin-top:12px">
+          Cada classe tem sua <strong>própria lógica de cálculo</strong>. Círculo sabe calcular círculo.
+          Retângulo sabe calcular retângulo. <span class="pill pt">Sem if/else!</span>
+        </div>
+      </div>
+
+      <!-- ══════════ S13 — NOVA FORMA SEM MODIFICAR ══════════ -->
+      <div class="slide" id="s13">
+        <div class="eyebrow">Solução com OCP — Passo 3</div>
+        <h2 class="title">Nova Forma — <span style="color:var(--true-c)">Zero Modificações</span></h2>
+        <div class="line"></div>
+        <div class="code code-good" style="max-width:680px"><span class="cm">// ✅ Triângulo novo — não tocamos em NADA do código existente!</span>
+<span class="kw">public class</span> Triangulo <span class="kw">implements</span> Forma {
+  <span class="kw">private double</span> base, altura;
+
+  <span class="kw">public</span> Triangulo(<span class="kw">double</span> base, <span class="kw">double</span> altura) {
+    <span class="kw">this</span>.base <span class="op">=</span> base;
+    <span class="kw">this</span>.altura <span class="op">=</span> altura;
+  }
+
+  <span class="ann">@Override</span>
+  <span class="kw">public double</span> calcularArea() {
+    <span class="kw">return</span> (base <span class="op">*</span> altura) <span class="op">/</span> 2;
+  }
+}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px">
+          <span class="pill pt"><span class="mi mi-sm">check</span> Círculo intocado</span>
+          <span class="pill pt"><span class="mi mi-sm">check</span> Retângulo intocado</span>
+          <span class="pill pt"><span class="mi mi-sm">check</span> Interface intocada</span>
+          <span class="pill pa"><span class="mi mi-sm">add</span> Triângulo: nova classe</span>
+        </div>
+      </div>
+
+      <!-- ══════════ S14 — CALCULADORA IMUTÁVEL ══════════ -->
+      <div class="slide" id="s14">
+        <div class="eyebrow">Solução com OCP — Resultado</div>
+        <h2 class="title">A <strong>Calculadora</strong> que Nunca Muda</h2>
+        <div class="line"></div>
+        <div class="code code-good" style="max-width:720px"><span class="cm">// ✅ Este método existe desde o início e NUNCA precisou mudar!</span>
+<span class="kw">public class</span> Calculadora {
+
+  <span class="kw">public double</span> calcular(Forma forma) {
+    <span class="kw">return</span> forma.calcularArea(); <span class="cm">// delega para cada forma</span>
+  }
+}
+
+<span class="cm">// ─── Usando ───────────────────────────────────────────────</span>
+Calculadora calc <span class="op">=</span> <span class="kw">new</span> Calculadora();
+
+System.out.println(calc.calcular(<span class="kw">new</span> Circulo(5)));        <span class="cm">// 78.54</span>
+System.out.println(calc.calcular(<span class="kw">new</span> Retangulo(4, 6)));   <span class="cm">// 24.0</span>
+System.out.println(calc.calcular(<span class="kw">new</span> Triangulo(3, 8)));   <span class="cm">// 12.0</span>
+<span class="cm">// Amanhã: Losango, Hexágono... zero mudanças na Calculadora!</span></div>
+        <div class="callout" style="max-width:720px;margin-top:10px">
+          <strong>Polimorfismo em ação:</strong> o método <code style="color:var(--teal)">calcular</code> chama <code style="color:var(--teal)">calcularArea()</code>
+          e cada objeto sabe o que fazer. Isso <em>é</em> o OCP.
+        </div>
+      </div>
+
+      <!-- ══════════ S15 — COMPARAÇÃO ANTES X DEPOIS ══════════ -->
+      <div class="slide" id="s15">
+        <div class="eyebrow">Resumo Visual</div>
+        <h2 class="title">Antes <span style="color:var(--false-c)">✕</span> Depois <span style="color:var(--true-c)">✓</span></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px">
+          <div class="cmp-box" style="border-color:rgba(255,92,92,0.3);background:rgba(255,92,92,0.04)">
+            <div class="cmp-h" style="color:var(--false-c)">
+              <span class="mi mi-sm">error</span> SEM OCP — Problema
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✕</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Nova forma → <strong style="color:var(--false-c)">editar método existente</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✕</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Testes antigos podem <strong style="color:var(--false-c)">quebrar</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✕</div>
+              <div style="font-size:0.82rem;color:var(--dim)">String "circulo" é <strong style="color:var(--false-c)">frágil</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✕</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Método cresce com <strong style="color:var(--false-c)">if/else infinito</strong></div>
+            </div>
+          </div>
+          <div class="cmp-box" style="border-color:rgba(52,210,122,0.3);background:rgba(52,210,122,0.04)">
+            <div class="cmp-h" style="color:var(--true-c)">
+              <span class="mi mi-sm">check_circle</span> COM OCP — Solução
+            </div>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Nova forma → <strong style="color:var(--true-c)">criar nova classe</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Código existente <strong style="color:var(--true-c)">permanece intocado</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Interface garante <strong style="color:var(--true-c)">type-safety</strong></div>
+            </div>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div style="font-size:0.82rem;color:var(--dim)">Calculadora tem <strong style="color:var(--true-c)">1 linha sempre</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S16 — DEBUGGER SEM OCP ══════════ -->
+      <div class="slide" id="s16">
+        <div class="eyebrow">Debugger Interativo</div>
+        <h2 class="title">Passo a Passo — <span style="color:var(--false-c)">Sem OCP</span></h2>
+        <div class="line"></div>
+        <div class="dbg" id="dbg-0" style="max-width:800px"></div>
+      </div>
+
+      <!-- ══════════ S17 — DEBUGGER COM OCP ══════════ -->
+      <div class="slide" id="s17">
+        <div class="eyebrow">Debugger Interativo</div>
+        <h2 class="title">Passo a Passo — <span style="color:var(--true-c)">Com OCP</span></h2>
+        <div class="line"></div>
+        <div class="dbg" id="dbg-1" style="max-width:800px"></div>
+      </div>
+
+      <!-- ══════════ S18 — EXEMPLO 2: NOTIFICAÇÕES ══════════ -->
+      <div class="slide" id="s18">
+        <div class="eyebrow">Exemplo 2 — Notificações</div>
+        <h2 class="title">OCP no <strong>Mundo Real</strong></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px">
+          <div>
+            <p style="font-size:0.72rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">
+              <span class="mi mi-sm">error</span> Sem OCP
+            </p>
+            <div class="code code-bad" style="font-size:clamp(0.64rem,1.05vw,0.76rem)"><span class="kw">class</span> Notificador {
+  <span class="kw">void</span> notificar(<span class="kw">String</span> tipo, <span class="kw">String</span> msg) {
+    <span class="kw">if</span> (tipo.equals(<span class="str">"email"</span>)) {
+      <span class="cm">// lógica de e-mail...</span>
+    } <span class="kw">else if</span> (tipo.equals(<span class="str">"sms"</span>)) {
+      <span class="cm">// lógica de SMS...</span>
+    }
+    <span class="cm">// WhatsApp? EDITAR AQUI!</span>
+  }
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.72rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">
+              <span class="mi mi-sm">check_circle</span> Com OCP
+            </p>
+            <div class="code code-good" style="font-size:clamp(0.64rem,1.05vw,0.76rem)"><span class="kw">interface</span> Notificacao {
+  <span class="kw">void</span> enviar(<span class="kw">String</span> msg);
+}
+<span class="kw">class</span> Email <span class="kw">implements</span> Notificacao {
+  <span class="kw">public void</span> enviar(<span class="kw">String</span> msg) { <span class="cm">/*...*/</span> }
+}
+<span class="kw">class</span> SMS <span class="kw">implements</span> Notificacao {
+  <span class="kw">public void</span> enviar(<span class="kw">String</span> msg) { <span class="cm">/*...*/</span> }
+}
+<span class="cm">// WhatsApp: NOVA CLASSE, zero mudanças!</span>
+<span class="kw">class</span> WhatsApp <span class="kw">implements</span> Notificacao {
+  <span class="kw">public void</span> enviar(<span class="kw">String</span> msg) { <span class="cm">/*...*/</span> }
+}</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:960px;margin-top:8px;text-align:center">
+          O mesmo padrão se aplica a <strong>relatórios</strong> (PDF/CSV/Excel), <strong>descontos</strong> (bronze/prata/ouro), <strong>exportações</strong>...
+        </div>
+      </div>
+
+      <!-- ══════════ S19 — PADRÕES RELACIONADOS ══════════ -->
+      <div class="slide" id="s19">
+        <div class="eyebrow">Padrões de Projeto</div>
+        <h2 class="title">Quem usa o <em>OCP</em> por dentro?</h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:560px;margin-bottom:20px">
+          Vários <strong>Design Patterns</strong> são, na essência, implementações do OCP.
+        </p>
+        <div class="g3" style="max-width:880px">
+          <div class="oc" style="border-top:2px solid var(--teal)">
+            <span class="mi mi-lg" style="color:var(--teal);margin-bottom:8px">shuffle</span>
+            <div class="nm">Strategy Pattern</div>
+            <div class="ds">Troca algoritmos em tempo de execução via interface — o <strong style="color:var(--white)">OCP mais puro</strong></div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--gold)">
+            <span class="mi mi-lg" style="color:var(--gold-lt);margin-bottom:8px">account_tree</span>
+            <div class="nm">Template Method</div>
+            <div class="ds">Classe base define o esqueleto, subclasses implementam os <strong style="color:var(--white)">passos específicos</strong></div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--dim2)">
+            <span class="mi mi-lg" style="color:var(--dim);margin-bottom:8px">build</span>
+            <div class="nm">Decorator Pattern</div>
+            <div class="ds">Adiciona comportamentos <strong style="color:var(--white)">sem modificar</strong> a classe original — extensão pura</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:880px;text-align:center;margin-top:8px">
+          Ao aprender esses padrões, você verá o OCP emergindo <strong>naturalmente</strong> em cada um deles.
+        </div>
+      </div>
+
+      <!-- ══════════ S20 — QUIZ ══════════ -->
+      <div class="slide" id="s20">
+        <div class="eyebrow">Teste seu Conhecimento</div>
+        <h2 class="title"><em>Quiz</em> — OCP</h2>
+        <div class="line"></div>
+        <div class="gc gc-sm" style="text-align:center">
+          <p style="font-size:0.95rem;color:var(--white);font-weight:600;margin-bottom:18px;line-height:1.6">
+            Você precisa adicionar suporte a <strong>exportação XML</strong> no sistema.<br/>
+            Qual abordagem <span style="color:var(--teal)">segue o OCP</span>?
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="qopt" onclick="qz(this,false)">
+              A) Adicionar um <code>else if (tipo.equals("xml"))</code> ao método <code>exportar()</code> existente
+            </button>
+            <button class="qopt" onclick="qz(this,true)">
+              B) Criar uma nova classe <code>XmlExporter</code> que implementa a interface <code>Exportador</code>
+            </button>
+            <button class="qopt" onclick="qz(this,false)">
+              C) Modificar todas as classes existentes para suportar o formato XML internamente
+            </button>
+            <button class="qopt" onclick="qz(this,false)">
+              D) Deletar o método antigo e reescrever tudo para suportar XML também
+            </button>
+          </div>
+          <div id="qfb" style="margin-top:14px;font-size:0.88rem;min-height:24px"></div>
+        </div>
+      </div>
+
+      <!-- ══════════ S21 — BENEFÍCIOS ══════════ -->
+      <div class="slide" id="s21">
+        <div class="eyebrow">Por que Usar?</div>
+        <h2 class="title">Benefícios do <strong>OCP</strong></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:860px">
+          <div class="oc" style="border-top:2px solid var(--true-c)">
+            <span class="mi mi-lg" style="color:var(--true-c);margin-bottom:8px">verified_user</span>
+            <div class="nm">Código Estável</div>
+            <div class="ds">O que já foi testado e aprovado <strong style="color:var(--white)">não é tocado</strong>. Bugs novos não aparecem em funcionalidades antigas.</div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--teal)">
+            <span class="mi mi-lg" style="color:var(--teal);margin-bottom:8px">rocket_launch</span>
+            <div class="nm">Manutenção Rápida</div>
+            <div class="ds">Adicionar funcionalidade nova é <strong style="color:var(--white)">criar um arquivo</strong>, não caçar o lugar certo para editar.</div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--gold)">
+            <span class="mi mi-lg" style="color:var(--gold-lt);margin-bottom:8px">group_work</span>
+            <div class="nm">Trabalho em Equipe</div>
+            <div class="ds">Cada dev cria sua classe <strong style="color:var(--white)">independentemente</strong> — sem conflitos de merge no mesmo arquivo.</div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--dim2)">
+            <span class="mi mi-lg" style="color:var(--dim);margin-bottom:8px">science</span>
+            <div class="nm">Testes Isolados</div>
+            <div class="ds">Cada implementação é testada <strong style="color:var(--white)">separadamente</strong>. <code style="color:var(--teal)">TrianguloTest</code> não afeta <code style="color:var(--teal)">CirculoTest</code>.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S22 — DICAS PRÁTICAS ══════════ -->
+      <div class="slide" id="s22">
+        <div class="eyebrow">Boas Práticas</div>
+        <h2 class="title">Como <em>Identificar</em> e Aplicar</h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <div class="step">
+            <div class="sn">1</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Viu um <code style="color:var(--false-c)">if/else</code> ou <code style="color:var(--false-c)">switch</code> para tipos? Suspeite!</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Se o switch cresce a cada nova funcionalidade, é um sinal de violação do OCP.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn">2</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Crie uma <strong>interface ou classe abstrata</strong></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Extraia o comportamento variável para um contrato comum que todas as variações seguirão.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn">3</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Implemente cada variação em sua própria <strong>classe</strong></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Uma classe por comportamento. Pequenas, focadas, fáceis de testar e entender.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn">4</div>
+            <div>
+              <p style="font-size:0.92rem;color:var(--white);font-weight:700">Pergunte-se: <em>"Preciso editar código existente para adicionar isso?"</em></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Se a resposta for sim, revise o design. Com OCP, a resposta deve sempre ser <strong style="color:var(--true-c)">não</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S23 — RESUMO ══════════ -->
+      <div class="slide" id="s23">
+        <div class="eyebrow">Recapitulando</div>
+        <h2 class="title">O que <em>Aprendemos</em> Hoje</h2>
+        <div class="line"></div>
+        <div class="g3" style="max-width:900px;margin-bottom:16px">
+          <div class="oc" style="border-top:2px solid var(--teal)">
+            <span class="mi mi-lg" style="color:var(--teal);margin-bottom:8px">menu_book</span>
+            <div class="nm">OCP = Regra Dupla</div>
+            <div class="ds">Aberto para <strong style="color:var(--true-c)">extensão</strong> + fechado para <strong style="color:var(--gold)">modificação</strong></div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--gold)">
+            <span class="mi mi-lg" style="color:var(--gold-lt);margin-bottom:8px">code</span>
+            <div class="nm">Ferramenta: Interface</div>
+            <div class="ds">Contratos estáveis permitem que o código <strong style="color:var(--white)">cresça sem quebrar</strong></div>
+          </div>
+          <div class="oc" style="border-top:2px solid var(--true-c)">
+            <span class="mi mi-lg" style="color:var(--true-c);margin-bottom:8px">add_circle</span>
+            <div class="nm">Nova Regra</div>
+            <div class="ds">Funcionalidade nova = <strong style="color:var(--true-c)">nova classe</strong>, não edição de código existente</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:900px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">lightbulb</span>
+          Sempre que sentir o impulso de abrir uma classe existente para adicionar algo novo,
+          pense: <strong>"posso criar uma nova classe em vez disso?"</strong>
+        </div>
+      </div>
+
+      <!-- ══════════ S24 — FINAL ══════════ -->
+      <div class="slide" id="s24">
+        <div class="eyebrow">SOLID · Open-Closed Principle</div>
+        <span class="mi" style="font-size:5rem;color:var(--teal);margin-bottom:20px;display:block">extension</span>
+        <h1 class="hero" style="font-size:clamp(2.5rem,6vw,5rem)">
+          <em>Aberto</em> para crescer.<br/>
+          <strong>Fechado</strong> para quebrar.
+        </h1>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:520px;margin-top:12px">
+          Escreva código que <strong>envelhece bem</strong> — onde adicionar é natural
+          e modificar é raro.
+        </p>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <span class="pill pa">SOLID</span>
+          <span class="pill pa">Java</span>
+          <span class="pill pa">Interfaces</span>
+          <span class="pill pa">Polimorfismo</span>
+          <span class="pill pa">Clean Code</span>
+        </div>
+      </div>
+
+    </div><!-- #deck -->
+
+    <!-- ══════════ FOOTER ══════════ -->
+    <div id="footer">
+      <div class="f-brand">
+        <img
+          src="https://www.cesurgmarau.com.br/site/statics/logo.png"
+          alt="CESURG"
+          style="height:36px;object-fit:contain;filter:brightness(0) invert(1);"
+          id="logo-img"
+        />
+        <div class="f-sep"></div>
+        <button class="nbtn" onclick="toggleTheme()" id="theme-btn" title="Alternar Tema">
+          <span class="mi mi-sm" id="theme-icon">dark_mode</span>
+        </button>
+        <div class="f-sep"></div>
+        <div class="f-name">
+          <div class="l1">Engenharia de Software</div>
+          <div class="l2">SOLID · OCP</div>
+        </div>
+      </div>
+
+      <div class="f-bar"></div>
+
+      <div class="f-nav">
+        <button class="nbtn" id="btn-prev" onclick="go(-1)">
+          <span class="mi mi-sm">chevron_left</span> Anterior
+        </button>
+        <span class="f-count" id="cnt">1 / 24</span>
+        <button class="nbtn p" id="btn-next" onclick="go(1)">
+          Próximo <span class="mi mi-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const N = 24;
+      let cur = 1, busy = false;
+
+      function toggleTheme() {
+        const isLight = document.body.classList.toggle("light-mode");
+        document.getElementById("theme-icon").textContent = isLight ? "light_mode" : "dark_mode";
+        document.getElementById("logo-img").style.filter = isLight ? "none" : "brightness(0) invert(1)";
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+      }
+      if (localStorage.getItem("theme") === "light") toggleTheme();
+
+      function render() {
+        document.getElementById("cnt").textContent = cur + " / " + N;
+        document.getElementById("prog").style.width = ((cur - 1) / (N - 1)) * 100 + "%";
+        document.getElementById("btn-prev").style.opacity = cur === 1 ? ".3" : "1";
+        const nb = document.getElementById("btn-next");
+        if (cur === N) {
+          nb.textContent = "↺ Reiniciar";
+          nb.onclick = () => jump(1);
+        } else {
+          nb.innerHTML = 'Próximo <span class="mi mi-sm">chevron_right</span>';
+          nb.onclick = () => go(1);
+        }
+      }
+
+      const ANIM_DUR = 560;
+
+      function clearAnims(el) {
+        el.classList.remove("active","anim-exit-fwd","anim-exit-bwd","anim-enter-fwd","anim-enter-bwd");
+        el.style.cssText = "";
+      }
+
+      function go(dir) {
+        if (busy) return;
+        const nxt = cur + dir;
+        if (nxt < 1 || nxt > N) return;
+        busy = true;
+        const ce = document.getElementById("s" + cur);
+        const ne = document.getElementById("s" + nxt);
+        ce.classList.remove("active");
+        ce.classList.add(dir > 0 ? "anim-exit-fwd" : "anim-exit-bwd");
+        ne.style.opacity = "0";
+        ne.style.pointerEvents = "none";
+        setTimeout(() => {
+          ne.style.opacity = "";
+          ne.classList.add(dir > 0 ? "anim-enter-fwd" : "anim-enter-bwd");
+        }, 40);
+        setTimeout(() => {
+          clearAnims(ce);
+          ce.style.opacity = "0";
+          ce.style.pointerEvents = "none";
+          clearAnims(ne);
+          ne.classList.add("active");
+          busy = false;
+        }, ANIM_DUR + 40);
+        cur = nxt;
+        render();
+      }
+
+      function jump(n) {
+        const ce = document.getElementById("s" + cur);
+        clearAnims(ce);
+        ce.style.opacity = "0";
+        ce.style.pointerEvents = "none";
+        cur = n;
+        const ne = document.getElementById("s" + cur);
+        clearAnims(ne);
+        ne.classList.add("active");
+        render();
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (["ArrowRight","ArrowDown"," "].includes(e.key)) { e.preventDefault(); go(1); }
+        if (["ArrowLeft","ArrowUp"].includes(e.key)) { e.preventDefault(); go(-1); }
+      });
+
+      /* ─── QUIZ ─── */
+      function qz(btn, ok) {
+        document.querySelectorAll(".qopt").forEach(o => o.disabled = true);
+        btn.classList.add(ok ? "ok" : "no");
+        if (!ok) {
+          document.querySelectorAll(".qopt").forEach(o => {
+            if (o.textContent.includes("XmlExporter")) o.classList.add("ok");
+          });
+        }
+        document.getElementById("qfb").innerHTML = ok
+          ? '<span style="color:var(--true-c)">Correto! Criar <code>XmlExporter implements Exportador</code> adiciona funcionalidade sem tocar em nenhum arquivo existente.</span>'
+          : '<span style="color:var(--false-c)">Quase! A resposta correta é B — criar uma nova classe que implementa a interface existente. Isso é OCP!</span>';
+      }
+
+      /* ─── DEBUGGER ─── */
+      const DBG_DATA = [
+        {
+          // 0 — S16: código SEM OCP
+          lines: [
+            `<span class="kw">public class</span> CalculadoraArea {`,
+            `  <span class="kw">public double</span> calcular(<span class="kw">String</span> tipo, <span class="kw">double</span> a, <span class="kw">double</span> b) {`,
+            `    <span class="kw">if</span> (tipo.equals(<span class="str">"circulo"</span>)) {`,
+            `      <span class="kw">return</span> Math.PI <span class="op">*</span> a <span class="op">*</span> a;`,
+            `    } <span class="kw">else if</span> (tipo.equals(<span class="str">"retangulo"</span>)) {`,
+            `      <span class="kw">return</span> a <span class="op">*</span> b;`,
+            `    }`,
+            `    <span class="cm">// ← Triângulo? EDITAR AQUI. Risco de bug!</span>`,
+            `    <span class="kw">return</span> 0;`,
+            `  }`,
+            `}`,
+          ],
+          steps: [
+            { line: 0, exp: `Declaramos <strong>CalculadoraArea</strong>. Esta classe é responsável por calcular áreas de <em>qualquer tipo</em> de forma — já um problema de design.` },
+            { line: 1, exp: `O método recebe uma <strong>String tipo</strong> para identificar a forma. Strings são frágeis: <em>"Circulo"</em> ≠ <em>"circulo"</em> e o bug é silencioso.` },
+            { line: 2, exp: `Verificamos se o tipo é <strong>"circulo"</strong> e calculamos πr². Funciona — mas observe: a lógica de círculo está presa dentro desta classe.` },
+            { line: 4, exp: `Para retângulo, adicionamos um <strong>else if</strong>. Já estamos <em>modificando</em> o método para adicionar uma forma nova — violação do OCP.` },
+            { line: 7, exp: `<strong style="color:var(--false-c)">Problema crítico:</strong> para cada nova forma (triângulo, losango...) precisamos <em>abrir este arquivo e editar</em> aqui. O código cresce sem controle.` },
+            { line: 8, exp: `Retornamos 0 se o tipo não for reconhecido. Isso é silenciosamente errado — nenhum erro é lançado, a área 0 é retornada como se fosse válida.` },
+          ],
+          cur: 0,
+        },
+        {
+          // 1 — S17: código COM OCP
+          lines: [
+            `<span class="kw">public interface</span> Forma {`,
+            `  <span class="kw">double</span> calcularArea(); <span class="cm">// contrato imutável</span>`,
+            `}`,
+            ``,
+            `<span class="kw">public class</span> Calculadora {`,
+            `  <span class="kw">public double</span> calcular(Forma forma) {`,
+            `    <span class="kw">return</span> forma.calcularArea(); <span class="cm">// NUNCA muda!</span>`,
+            `  }`,
+            `}`,
+            ``,
+            `<span class="cm">// ✅ Nova forma: zero mudanças no código acima!</span>`,
+            `<span class="kw">class</span> Triangulo <span class="kw">implements</span> Forma {`,
+            `  <span class="ann">@Override</span>`,
+            `  <span class="kw">public double</span> calcularArea() {`,
+            `    <span class="kw">return</span> (base <span class="op">*</span> altura) <span class="op">/</span> 2;`,
+            `  }`,
+            `}`,
+          ],
+          steps: [
+            { line: 0, exp: `Criamos a <strong>interface Forma</strong>. Ela é o <em>contrato estável</em> do sistema — toda forma deve implementá-la. A interface nunca vai mudar.` },
+            { line: 1, exp: `O método <strong>calcularArea()</strong> não tem corpo aqui. É uma promessa: "quem implementar Forma, vai ter este método". O compilador garante!` },
+            { line: 4, exp: `A <strong>Calculadora</strong> recebe qualquer <em>Forma</em> — não importa qual. Ela não precisa saber se é círculo, retângulo ou triângulo.` },
+            { line: 6, exp: `<strong style="color:var(--true-c)">Este método nunca vai mudar!</strong> Ele simplesmente chama <em>forma.calcularArea()</em> e cada objeto sabe o que fazer — isso é polimorfismo.` },
+            { line: 10, exp: `Para adicionar triângulo, criamos uma <strong>nova classe</strong> — sem abrir nenhum arquivo existente. Círculo, Retângulo e Calculadora permanecem intocados.` },
+            { line: 11, exp: `<strong>Triangulo implements Forma</strong> — o compilador exige que <em>calcularArea()</em> seja implementado. Sem essa implementação, o código não compila. Segurança garantida!` },
+            { line: 14, exp: `A fórmula do triângulo fica aqui, isolada. Se a fórmula mudar, só <strong>este arquivo</strong> muda — sem afetar círculo ou retângulo. OCP completo!` },
+          ],
+          cur: 0,
+        },
+      ];
+
+      function renderDbg(id) {
+        const el = document.getElementById("dbg-" + id);
+        if (!el) return;
+        const d = DBG_DATA[id];
+        const step = d.steps[d.cur];
+        const total = d.steps.length;
+        const dots = d.steps.map((_, i) => `<span class="${i === d.cur ? "on" : ""}"></span>`).join("");
+        const linesHTML = d.lines.map((content, i) => {
+          const active = i === step.line;
+          return `<div class="dbg-line${active ? " active" : ""}">
+            <div class="dbg-lnum">${i + 1}</div>
+            <div class="dbg-arr">▶</div>
+            <div class="dbg-content">${content}</div>
+          </div>`;
+        }).join("");
+        el.innerHTML = `
+          <div class="dbg-bar">
+            <div class="dbg-label">
+              <div class="dbg-dot"></div>
+              DEBUGGER
+              <div class="dbg-dots">${dots}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="dbg-step-info">Passo ${d.cur + 1} / ${total}</span>
+              <div class="dbg-controls">
+                <button class="dbg-btn" onclick="dbgStep(${id},-1)" ${d.cur === 0 ? "disabled" : ""}>◀ Anterior</button>
+                <button class="dbg-btn run" onclick="dbgStep(${id},1)" ${d.cur === total - 1 ? "disabled" : ""}>Próxima ▶</button>
+              </div>
+            </div>
+          </div>
+          <div class="dbg-code">${linesHTML}</div>
+          <div class="dbg-exp">💬 &nbsp;${step.exp}</div>`;
+      }
+
+      function dbgStep(id, dir) {
+        const d = DBG_DATA[id];
+        d.cur = Math.max(0, Math.min(d.steps.length - 1, d.cur + dir));
+        renderDbg(id);
+      }
+
+      [0, 1].forEach(renderDbg);
+      render();
+
+      /* ─── CUSTOM CURSOR ─── */
+      const dot  = document.getElementById("cur-dot");
+      const ring = document.getElementById("cur-ring");
+      const glow = document.getElementById("cur-glow");
+      let mx=-200, my=-200, rx=-200, ry=-200, gx=-200, gy=-200;
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function animCursor() {
+        rx = lerp(rx, mx, 0.14); ry = lerp(ry, my, 0.14);
+        gx = lerp(gx, mx, 0.08); gy = lerp(gy, my, 0.08);
+        dot.style.left  = mx + "px"; dot.style.top  = my + "px";
+        ring.style.left = rx + "px"; ring.style.top = ry + "px";
+        glow.style.left = gx + "px"; glow.style.top = gy + "px";
+        requestAnimationFrame(animCursor);
+      }
+      animCursor();
+
+      document.addEventListener("mousemove", e => { mx = e.clientX; my = e.clientY; });
+      document.addEventListener("mouseleave", () => { dot.style.opacity="0"; ring.style.opacity="0"; glow.style.opacity="0"; });
+      document.addEventListener("mouseenter", () => { dot.style.opacity="1"; ring.style.opacity="1"; glow.style.opacity="1"; });
+      document.addEventListener("mousedown", () => document.body.classList.add("cur-click"));
+      document.addEventListener("mouseup",   () => document.body.classList.remove("cur-click"));
+
+      const HOVER_SEL = "button, a, [onclick], .oc, .qopt";
+      document.addEventListener("mouseover", e => {
+        const el = e.target.closest(HOVER_SEL);
+        document.body.classList.toggle("cur-hover", !!el);
+      });
+      const NAV_SEL = "#btn-prev, #btn-next";
+      document.addEventListener("mouseover", e => {
+        const el = e.target.closest(NAV_SEL);
+        if (el) { document.body.classList.remove("cur-hover"); document.body.classList.add("cur-nav"); }
+      });
+      document.addEventListener("mouseout", e => {
+        const el = e.target.closest(NAV_SEL);
+        if (el) document.body.classList.remove("cur-nav");
+      });
+    </script>
+  </body>
+</html>
