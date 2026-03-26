@@ -1,0 +1,1474 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOLID — Liskov Substitution Principle — CESURG</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #07090a;
+        --teal: #00a3b8;
+        --teal-dk: #005f73;
+        --gold: #c8952a;
+        --gold-lt: #e8aa3d;
+        --white: #ffffff;
+        --dim: rgba(255, 255, 255, 0.55);
+        --dim2: rgba(255, 255, 255, 0.28);
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-b: rgba(255, 255, 255, 0.08);
+        --true-c: #34d27a;
+        --false-c: #ff5c5c;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+
+      body.light-mode {
+        --bg: #f8fafc;
+        --teal: #0891b2;
+        --teal-dk: #164e63;
+        --gold: #b45309;
+        --gold-lt: #d97706;
+        --white: #0f172a;
+        --dim: #475569;
+        --dim2: #94a3b8;
+        --glass: rgba(15, 23, 42, 0.03);
+        --glass-b: rgba(15, 23, 42, 0.06);
+        --border: rgba(15, 23, 42, 0.08);
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--white);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: none;
+      }
+
+      /* ─── CUSTOM CURSOR ─── */
+      #cur-dot {
+        position: fixed;
+        width: 8px; height: 8px;
+        background: var(--white);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition: width 0.15s, height 0.15s, background 0.2s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-ring {
+        position: fixed;
+        width: 36px; height: 36px;
+        border: 1.5px solid rgba(255,255,255,0.5);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.4,0,0.2,1), height 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-glow {
+        position: fixed;
+        width: 180px; height: 180px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9997;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(0,163,184,0.12) 0%, rgba(0,163,184,0.04) 45%, transparent 70%);
+        transition: opacity 0.3s;
+        will-change: transform;
+      }
+      body.cur-hover #cur-dot { width: 6px; height: 6px; background: var(--teal); }
+      body.cur-hover #cur-ring { width: 52px; height: 52px; border-color: var(--teal); }
+      body.cur-click #cur-dot { width: 12px; height: 12px; background: var(--gold); }
+      body.cur-click #cur-ring { width: 22px; height: 22px; border-color: var(--gold); border-width: 2px; }
+      body.cur-nav #cur-dot { width: 10px; height: 10px; background: var(--gold); }
+      body.cur-nav #cur-ring { width: 60px; height: 60px; border-color: var(--gold); border-width: 2px; }
+
+      body.light-mode #cur-dot { background: var(--teal); }
+      body.light-mode #cur-ring { border-color: rgba(15,23,42,0.4); }
+      body.light-mode #footer { background: rgba(248,250,252,0.92); border-top: 1px solid var(--border); }
+      body.light-mode .dbg { background: #f1f5f9; border-color: rgba(15,23,42,0.12); }
+      body.light-mode .dbg-bar { background: rgba(8,145,178,0.06); border-bottom-color: rgba(15,23,42,0.08); }
+      body.light-mode .dbg-label { color: var(--teal); }
+      body.light-mode .dbg-dot { background: var(--teal); }
+      body.light-mode .dbg-step-info { color: var(--dim); }
+      body.light-mode .dbg-btn { border-color: rgba(15,23,42,0.15); color: var(--dim); background: transparent; }
+      body.light-mode .dbg-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+      body.light-mode .dbg-btn.run { background: var(--teal); border-color: var(--teal); color: #fff; }
+      body.light-mode .dbg-content { color: #1e4e6a; }
+      body.light-mode .dbg-lnum { color: rgba(15,23,42,0.25); }
+      body.light-mode .dbg-line.active { background: rgba(180,83,9,0.08); }
+      body.light-mode .dbg-line.active .dbg-lnum { color: var(--gold); }
+      body.light-mode .dbg-line.active .dbg-arr { color: var(--gold); }
+      body.light-mode .dbg-exp { background: rgba(180,83,9,0.04); border-top-color: rgba(15,23,42,0.08); color: var(--dim); }
+      body.light-mode .dbg-exp strong { color: #0f172a; }
+      body.light-mode .dbg-exp em { color: var(--teal); }
+      body.light-mode .dbg-dots span { background: rgba(15,23,42,0.15); }
+      body.light-mode .dbg-dots span.on { background: var(--gold); }
+      body.light-mode .kw { color: #0369a1; }
+      body.light-mode .str { color: #15803d; }
+      body.light-mode .op { color: #b45309; }
+      body.light-mode .cm { color: #94a3b8; }
+      body.light-mode .nbtn { border-color: var(--border); color: var(--dim); }
+      body.light-mode .nbtn:hover { border-color: var(--teal); color: var(--teal); }
+      body.light-mode .f-count { color: var(--dim); }
+      body.light-mode .f-name .l1 { color: var(--dim); }
+      body.light-mode .f-name .l2 { color: var(--gold); }
+      body.light-mode .f-sep { background: var(--border); }
+      body.light-mode .f-bar { background: var(--teal-dk); opacity: 0.15; }
+      body.light-mode .code { background: rgba(15,23,42,0.05); border-color: rgba(15,23,42,0.1); color: #1e4e6a; }
+
+      button, a, [onclick], input, select, textarea { cursor: none; }
+
+      /* ─── PROGRESS ─── */
+      #prog {
+        position: fixed; top: 0; left: 0; height: 2px;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+        z-index: 999;
+      }
+
+      /* ─── SLIDES ─── */
+      #deck {
+        width: 100%;
+        height: calc(100vh - 56px);
+        position: relative;
+        perspective: 1400px;
+        perspective-origin: 50% 45%;
+      }
+      .slide {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 36px 56px;
+        opacity: 0; pointer-events: none;
+        will-change: transform, opacity;
+      }
+      .slide.active { opacity: 1; pointer-events: all; transform: none; }
+
+      @keyframes kExitFwd {
+        from { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+        to   { opacity: 0; transform: translateX(-4%) scale(0.94) translateZ(-60px); }
+      }
+      @keyframes kEnterFwd {
+        from { opacity: 0; transform: translateX(5%) scale(0.96) translateZ(-30px); }
+        to   { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+      }
+      @keyframes kExitBwd {
+        from { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+        to   { opacity: 0; transform: translateX(4%) scale(0.94) translateZ(-60px); }
+      }
+      @keyframes kEnterBwd {
+        from { opacity: 0; transform: translateX(-5%) scale(0.96) translateZ(-30px); }
+        to   { opacity: 1; transform: translateX(0) scale(1) translateZ(0); }
+      }
+      .anim-exit-fwd  { animation: kExitFwd  520ms cubic-bezier(0.22,1,0.36,1) forwards; }
+      .anim-exit-bwd  { animation: kExitBwd  520ms cubic-bezier(0.22,1,0.36,1) forwards; }
+      .anim-enter-fwd { animation: kEnterFwd 560ms cubic-bezier(0.22,1,0.36,1) forwards; pointer-events: all; }
+      .anim-enter-bwd { animation: kEnterBwd 560ms cubic-bezier(0.22,1,0.36,1) forwards; pointer-events: all; }
+
+      /* ─── FOOTER ─── */
+      #footer {
+        position: fixed; bottom: 0; left: 0; right: 0; height: 56px;
+        background: rgba(7,9,10,0.92);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 36px; z-index: 500;
+      }
+      .f-brand { display: flex; align-items: center; gap: 10px; }
+      .f-sep { width: 1px; height: 24px; background: var(--border); }
+      .f-name { line-height: 1.2; }
+      .f-name .l1 { font-size: 0.58rem; font-weight: 600; color: var(--dim2); letter-spacing: 1.5px; text-transform: uppercase; }
+      .f-name .l2 { font-size: 0.75rem; font-weight: 800; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+      .f-bar { flex: 1; height: 2px; background: var(--teal-dk); margin: 0 24px; border-radius: 1px; }
+      .f-nav { display: flex; align-items: center; gap: 10px; }
+      .f-count { font-size: 0.72rem; font-weight: 500; color: var(--dim2); min-width: 44px; text-align: center; }
+
+      .nbtn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 5px 16px; border-radius: 20px; cursor: pointer;
+        font-size: 0.78rem; font-weight: 600; font-family: inherit;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+      }
+      .nbtn:hover { border-color: var(--teal); color: var(--teal); }
+      .nbtn.p { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .nbtn.p:hover { background: var(--teal-dk); }
+
+      /* ─── TYPOGRAPHY ─── */
+      .eyebrow {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--teal); margin-bottom: 16px;
+      }
+      .hero {
+        font-size: clamp(3rem, 7vw, 6rem); font-weight: 800;
+        line-height: 1; text-align: center; letter-spacing: -0.03em;
+      }
+      .hero em { font-style: normal; color: var(--gold); }
+      .hero strong { color: var(--teal); }
+      .title {
+        font-size: clamp(1.8rem, 4vw, 3.2rem); font-weight: 700;
+        line-height: 1.1; text-align: center; letter-spacing: -0.02em;
+      }
+      .title em { font-style: normal; color: var(--gold); }
+      .title strong { color: var(--teal); }
+      .subtitle {
+        font-size: clamp(0.95rem, 1.8vw, 1.15rem); font-weight: 400;
+        color: var(--dim); line-height: 1.7; text-align: center;
+      }
+      .subtitle strong { color: var(--white); font-weight: 600; }
+
+      /* ─── GLASS CARD ─── */
+      .gc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 20px; padding: 28px 40px;
+        backdrop-filter: blur(8px); width: 100%; max-width: 920px;
+      }
+      .gc-sm { max-width: 640px; }
+      .gc-md { max-width: 780px; }
+
+      /* ─── DIVIDER ─── */
+      .line {
+        width: 40px; height: 2px; background: var(--gold);
+        border-radius: 1px; margin: 14px auto;
+      }
+
+      /* ─── GRID ─── */
+      .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 960px; }
+      .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; width: 100%; max-width: 1000px; }
+
+      /* ─── OP CARD ─── */
+      .oc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 16px; padding: 20px 18px; text-align: center;
+        transition: transform 0.25s, background 0.25s, border-color 0.25s;
+      }
+      .oc:hover { transform: translateY(-4px); background: var(--glass-b); }
+      .oc .sym { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+      .oc .nm { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: var(--white); }
+      .oc .ds { font-size: 0.78rem; color: var(--dim); line-height: 1.55; }
+
+      /* ─── CALLOUT ─── */
+      .callout {
+        border-left: 2px solid var(--teal); padding: 12px 18px; margin-top: 16px;
+        font-size: 0.88rem; color: var(--dim);
+        background: rgba(0,163,184,0.06); border-radius: 0 8px 8px 0;
+      }
+      .callout strong { color: var(--white); }
+      .callout-gold { border-left: 2px solid var(--gold); background: rgba(200,149,42,0.06); }
+      .callout-red { border-left: 2px solid var(--false-c); background: rgba(255,92,92,0.06); }
+
+      /* ─── CODE ─── */
+      .code {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 22px;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+        font-size: clamp(0.7rem, 1.3vw, 0.84rem);
+        white-space: pre; text-align: left; color: #a8d8e4;
+        line-height: 1.65; width: 100%;
+      }
+      .code-bad { border-color: rgba(255,92,92,0.3); box-shadow: 0 0 0 1px rgba(255,92,92,0.1); }
+      .code-good { border-color: rgba(52,210,122,0.3); box-shadow: 0 0 0 1px rgba(52,210,122,0.1); }
+      .kw  { color: #7ec8e3; }
+      .str { color: #a8d8b0; }
+      .op  { color: var(--gold-lt); }
+      .cm  { color: #4a6a74; }
+      .ann { color: #c3a6ff; }
+
+      /* ─── PILL ─── */
+      .pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+      .pt { background: rgba(52,210,122,0.12); color: var(--true-c); border: 1px solid rgba(52,210,122,0.25); }
+      .pf { background: rgba(255,92,92,0.12); color: var(--false-c); border: 1px solid rgba(255,92,92,0.25); }
+      .pa { background: rgba(0,163,184,0.12); color: var(--teal); border: 1px solid rgba(0,163,184,0.25); }
+      .pg { background: rgba(200,149,42,0.12); color: var(--gold-lt); border: 1px solid rgba(200,149,42,0.25); }
+
+      /* ─── STEP LIST ─── */
+      .step {
+        display: flex; align-items: flex-start; gap: 14px;
+        padding: 13px 0; border-bottom: 1px solid var(--border);
+      }
+      .step:last-child { border: none; }
+      .sn {
+        min-width: 30px; height: 30px; border-radius: 50%;
+        background: rgba(0,163,184,0.15); border: 1px solid rgba(0,163,184,0.3);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.82rem; color: var(--teal); flex-shrink: 0;
+      }
+      .sn-red { background: rgba(255,92,92,0.12); border-color: rgba(255,92,92,0.3); color: var(--false-c); }
+      .sn-green { background: rgba(52,210,122,0.12); border-color: rgba(52,210,122,0.3); color: var(--true-c); }
+
+      /* ─── BIG STAT ─── */
+      .big-stat { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+      .stat { text-align: center; }
+      .stat-val { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+      .stat-lbl { font-size: 0.78rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
+
+      /* ─── QUIZ ─── */
+      .qopt {
+        width: 100%; text-align: left; background: var(--glass); border: 1px solid var(--border);
+        border-radius: 10px; padding: 12px 18px; color: var(--dim);
+        font-size: 0.88rem; font-family: inherit; cursor: pointer; transition: all 0.2s;
+      }
+      .qopt:hover { border-color: var(--teal); color: var(--white); background: rgba(0,163,184,0.08); }
+      .qopt.ok { border-color: var(--true-c); background: rgba(52,210,122,0.1); color: var(--true-c); font-weight: 700; }
+      .qopt.no { border-color: var(--false-c); background: rgba(255,92,92,0.08); color: var(--false-c); }
+
+      /* ─── ICONS ─── */
+      .mi {
+        font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal;
+        font-size: 1.5rem; line-height: 1; letter-spacing: normal; text-transform: none;
+        display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+        -webkit-font-smoothing: antialiased; font-feature-settings: "liga"; vertical-align: middle;
+      }
+      .mi-sm { font-size: 1.1rem; }
+      .mi-lg { font-size: 2rem; }
+      .mi-xl { font-size: 3.5rem; }
+
+      /* ─── SOLID LETTERS ─── */
+      .solid-row {
+        display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+        width: 100%; max-width: 900px; margin: 20px 0;
+      }
+      .solid-card {
+        flex: 1; min-width: 120px; max-width: 160px;
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 14px; padding: 16px 12px; text-align: center;
+        transition: transform 0.2s;
+      }
+      .solid-card.highlight {
+        background: rgba(0,163,184,0.1); border-color: var(--teal);
+        box-shadow: 0 0 20px rgba(0,163,184,0.15);
+        transform: translateY(-6px) scale(1.03);
+      }
+      .solid-letter { font-size: 2.4rem; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+      .solid-name { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; color: var(--dim); line-height: 1.4; }
+
+      /* ─── COMPARE BOX ─── */
+      .cmp-box {
+        border-radius: 14px; padding: 18px 20px;
+        border: 1px solid var(--border); background: var(--glass);
+      }
+      .cmp-box .cmp-h {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; margin-bottom: 12px; display: flex;
+        align-items: center; gap: 8px;
+      }
+
+      /* ─── DEBUGGER ─── */
+      .dbg {
+        background: rgba(0,0,0,0.55); border: 1px solid var(--border);
+        border-radius: 14px; overflow: hidden; width: 100%;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+      }
+      .dbg-bar {
+        background: rgba(0,163,184,0.07); border-bottom: 1px solid var(--border);
+        padding: 8px 16px; display: flex; align-items: center;
+        justify-content: space-between; gap: 12px;
+      }
+      .dbg-label {
+        font-size: 0.62rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; color: var(--teal);
+        font-family: "Inter", sans-serif; display: flex; align-items: center; gap: 8px;
+      }
+      .dbg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: dbgpulse 1.4s ease-in-out infinite; }
+      @keyframes dbgpulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+      .dbg-step-info { font-size: 0.72rem; color: var(--dim2); font-family: "Inter", sans-serif; }
+      .dbg-controls { display: flex; gap: 6px; align-items: center; }
+      .dbg-btn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 4px 13px; border-radius: 6px; cursor: pointer;
+        font-size: 0.75rem; font-weight: 600; font-family: "Inter", sans-serif;
+        transition: all 0.15s; line-height: 1.5;
+      }
+      .dbg-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+      .dbg-btn:disabled { opacity: 0.22; cursor: default; }
+      .dbg-btn.run { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .dbg-btn.run:hover:not(:disabled) { background: var(--teal-dk); }
+      .dbg-code { padding: 8px 0; overflow-x: auto; }
+      .dbg-line { display: flex; align-items: center; min-height: 28px; transition: background 0.22s; }
+      .dbg-line.active { background: rgba(200,149,42,0.13); }
+      .dbg-lnum {
+        width: 38px; text-align: right; padding-right: 14px; font-size: 0.7rem;
+        color: rgba(255,255,255,0.18); flex-shrink: 0; transition: color 0.22s; line-height: 28px;
+      }
+      .dbg-line.active .dbg-lnum { color: var(--gold); }
+      .dbg-arr { width: 18px; flex-shrink: 0; color: var(--gold); font-size: 0.8rem; text-align: center; line-height: 28px; visibility: hidden; }
+      .dbg-line.active .dbg-arr { visibility: visible; }
+      .dbg-content { flex: 1; font-size: clamp(0.7rem, 1.2vw, 0.84rem); color: #a8d8e4; padding-right: 20px; white-space: pre; line-height: 28px; }
+      .dbg-exp {
+        border-top: 1px solid var(--border); background: rgba(200,149,42,0.055);
+        padding: 12px 20px; font-size: 0.86rem; color: var(--dim);
+        min-height: 52px; font-family: "Inter", sans-serif; line-height: 1.6; transition: opacity 0.25s;
+      }
+      .dbg-exp strong { color: var(--white); }
+      .dbg-exp em { color: var(--teal); font-style: normal; }
+      .dbg-dots { display: flex; align-items: center; gap: 5px; }
+      .dbg-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
+      .dbg-dots span.on { background: var(--gold); transform: scale(1.3); }
+
+      /* ─── ANALOGY ─── */
+      .ana-pair { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+      .ana-item { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+
+      /* ─── BIRD GRID ─── */
+      .bird-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 12px; width: 100%; max-width: 900px;
+      }
+      .bird-card {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 14px; padding: 16px 12px; text-align: center;
+      }
+      .bird-emoji { font-size: 2.2rem; margin-bottom: 8px; }
+      .bird-name { font-size: 0.82rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+      .bird-caps { display: flex; flex-direction: column; gap: 4px; }
+      .bird-cap { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; }
+      .bird-cap.ok { background: rgba(52,210,122,0.12); color: var(--true-c); border: 1px solid rgba(52,210,122,0.2); }
+      .bird-cap.no { background: rgba(255,92,92,0.08); color: var(--false-c); border: 1px solid rgba(255,92,92,0.2); text-decoration: line-through; }
+
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 640px) {
+        .g2,.g3 { grid-template-columns: 1fr; }
+        .slide { padding: 20px 16px; }
+        #footer { padding: 0 16px; }
+        .f-bar { margin: 0 12px; }
+        .solid-row { gap: 6px; }
+        .solid-card { min-width: 90px; }
+        .solid-letter { font-size: 1.8rem; }
+        .bird-grid { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cur-glow"></div>
+    <div id="cur-ring"></div>
+    <div id="cur-dot"></div>
+    <div id="prog"></div>
+
+    <div id="deck">
+
+      <!-- ══════════ S1 — CAPA ══════════ -->
+      <div class="slide active" id="s1">
+        <div class="eyebrow">Engenharia de Software · SOLID</div>
+        <span class="mi" style="font-size:5rem;color:var(--teal);margin-bottom:20px">swap_horiz</span>
+        <h1 class="hero">Princípio de<br /><em>Substituição</em><br /><strong>de Liskov</strong></h1>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:480px;margin-top:10px">
+          <strong>Liskov Substitution Principle</strong> — o "L" do SOLID<br/>
+          Subclasses que <strong>nunca mentem</strong> sobre o que podem fazer.
+        </p>
+      </div>
+
+      <!-- ══════════ S2 — SOLID ══════════ -->
+      <div class="slide" id="s2">
+        <div class="eyebrow">Contexto</div>
+        <h2 class="title">O que é <strong>SOLID</strong>?</h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:600px;margin-bottom:20px">
+          SOLID é um conjunto de <strong>5 princípios</strong> para escrever código orientado a objetos
+          mais fácil de manter, extender e entender.
+        </p>
+        <div class="solid-row">
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">S</div>
+            <div class="solid-name">Single<br/>Responsibility</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">O</div>
+            <div class="solid-name">Open-Closed<br/>Principle</div>
+          </div>
+          <div class="solid-card highlight">
+            <div class="solid-letter" style="color:var(--teal)">L</div>
+            <div class="solid-name" style="color:var(--teal);font-weight:800">Liskov<br/>Substitution</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">I</div>
+            <div class="solid-name">Interface<br/>Segregation</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">D</div>
+            <div class="solid-name">Dependency<br/>Inversion</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:640px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">star</span>
+          Hoje focaremos no <strong>Liskov Substitution Principle</strong> — garantia de que sua hierarquia de classes é confiável.
+        </div>
+      </div>
+
+      <!-- ══════════ S3 — BARBARA LISKOV ══════════ -->
+      <div class="slide" id="s3">
+        <div class="eyebrow">A Criadora</div>
+        <h2 class="title"><em>Barbara Liskov</em></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:820px">
+          <div class="gc" style="padding:24px 28px">
+            <div style="font-size:3rem;margin-bottom:12px">👩‍🔬</div>
+            <p style="font-size:0.88rem;font-weight:700;color:var(--teal);margin-bottom:8px">Cientista da Computação</p>
+            <p style="font-size:0.84rem;color:var(--dim);line-height:1.7">
+              Formulou o princípio em <strong style="color:var(--white)">1987</strong> no artigo
+              <em>"Data Abstraction and Hierarchy"</em>.
+              Em <strong style="color:var(--white)">2008</strong> ganhou o
+              <strong style="color:var(--gold)">Prêmio Turing</strong> — o "Nobel da Computação".
+            </p>
+          </div>
+          <div class="gc" style="padding:24px 28px">
+            <span class="mi" style="font-size:2.5rem;color:var(--gold);margin-bottom:12px;display:block">format_quote</span>
+            <p style="font-size:0.9rem;color:var(--white);font-weight:600;line-height:1.6;margin-bottom:8px">
+              "Se S é um subtipo de T, então objetos do tipo T podem ser substituídos por objetos do tipo S sem alterar nenhuma propriedade do programa."
+            </p>
+            <p style="font-size:0.75rem;color:var(--dim)">— Barbara Liskov, 1987</p>
+          </div>
+        </div>
+        <div class="callout" style="max-width:780px;margin-top:16px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">lightbulb</span>
+          Em outras palavras: <strong>trocar um objeto pela sua subclasse não pode quebrar o programa.</strong>
+        </div>
+      </div>
+
+      <!-- ══════════ S4 — O QUE É SUBSTITUIÇÃO ══════════ -->
+      <div class="slide" id="s4">
+        <div class="eyebrow">O Conceito Central</div>
+        <h2 class="title">O que é <em>Substituição</em>?</h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:16px">
+          <p style="font-size:0.95rem;color:var(--dim);line-height:1.7;margin-bottom:16px">
+            Imagine que você tem uma função que aceita um <strong style="color:var(--white)">Animal</strong>:
+          </p>
+          <div class="code"><span class="kw">void</span> <span class="op">fazerComer</span>(Animal animal) {
+    animal.comer(); <span class="cm">// confia no contrato de Animal</span>
+}</div>
+        </div>
+        <div class="g3" style="max-width:780px">
+          <div class="oc" style="border-color:rgba(52,210,122,0.3)">
+            <div class="sym">🐕</div>
+            <div class="nm" style="color:var(--true-c)">Cachorro</div>
+            <div class="ds">extends Animal<br/><span class="pill pt">funciona</span></div>
+          </div>
+          <div class="oc" style="border-color:rgba(52,210,122,0.3)">
+            <div class="sym">🐈</div>
+            <div class="nm" style="color:var(--true-c)">Gato</div>
+            <div class="ds">extends Animal<br/><span class="pill pt">funciona</span></div>
+          </div>
+          <div class="oc" style="border-color:rgba(52,210,122,0.3)">
+            <div class="sym">🦜</div>
+            <div class="nm" style="color:var(--true-c)">Papagaio</div>
+            <div class="ds">extends Animal<br/><span class="pill pt">funciona</span></div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:680px">
+          <span class="mi mi-sm" style="color:var(--teal)">check_circle</span>
+          <strong>LSP = a função não precisa saber o tipo real.</strong>
+          Ela confia no contrato. Qualquer subclasse honra esse contrato.
+        </div>
+      </div>
+
+      <!-- ══════════ S5 — ANALOGIA DO CONTRATO ══════════ -->
+      <div class="slide" id="s5">
+        <div class="eyebrow">Analogia</div>
+        <h2 class="title">A <em>Empresa de Entregas</em></h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:16px">
+          <p style="font-size:0.95rem;color:var(--white);font-weight:600;margin-bottom:8px">
+            📦 Contrato com a empresa principal:
+          </p>
+          <p style="font-size:0.9rem;color:var(--dim);line-height:1.7">
+            <em>"Entregamos pacotes de até 10kg em até <strong style="color:var(--white)">3 dias úteis</strong>."</em>
+          </p>
+        </div>
+        <div class="g2" style="max-width:760px">
+          <div class="cmp-box" style="border-color:rgba(52,210,122,0.3);background:rgba(52,210,122,0.04)">
+            <div class="cmp-h" style="color:var(--true-c)">
+              <span class="mi mi-sm">check_circle</span> Subempresa A — OK (LSP)
+            </div>
+            <p style="font-size:0.88rem;color:var(--dim);line-height:1.7">
+              Entrega em <strong style="color:var(--white)">1 dia</strong>.
+              Melhor que o prometido — o cliente fica feliz.
+              <br/><span class="pill pt" style="margin-top:8px;display:inline-block">Garante mais que o contrato</span>
+            </p>
+          </div>
+          <div class="cmp-box" style="border-color:rgba(255,92,92,0.3);background:rgba(255,92,92,0.04)">
+            <div class="cmp-h" style="color:var(--false-c)">
+              <span class="mi mi-sm">cancel</span> Subempresa B — VIOLA LSP
+            </div>
+            <p style="font-size:0.88rem;color:var(--dim);line-height:1.7">
+              Entrega em <strong style="color:var(--false-c)">7 dias</strong>.
+              Pior que o prometido — o cliente é prejudicado.
+              <br/><span class="pill pf" style="margin-top:8px;display:inline-block">Garante menos que o contrato</span>
+            </p>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:700px">
+          <span class="mi mi-sm" style="color:var(--gold)">info</span>
+          No código: <strong>subclasse pode fazer mais</strong> (entregar mais rápido),
+          mas <strong>nunca pode fazer menos</strong> (demorar mais que o prometido).
+        </div>
+      </div>
+
+      <!-- ══════════ S6 — VIOLAÇÃO CLÁSSICA: PATO DE BORRACHA ══════════ -->
+      <div class="slide" id="s6">
+        <div class="eyebrow">Violação Clássica 1</div>
+        <h2 class="title">O <em>Pato de Borracha</em> 🐥</h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:14px">
+          <p style="font-size:0.88rem;color:var(--dim);line-height:1.7;margin-bottom:10px">
+            Imagine: "se anda como pato e grasna como pato, é um pato."
+            Mas e se for um <strong style="color:var(--white)">pato de borracha</strong> que só grasna com pilha?
+          </p>
+          <div class="code code-bad"><span class="kw">class</span> <span class="op">Pato</span> {
+    <span class="kw">void</span> voar()   { <span class="str">"voando!"</span>; }
+    <span class="kw">void</span> nadar()  { <span class="str">"nadando!"</span>; }
+    <span class="kw">void</span> grasnar() { <span class="str">"quack!"</span>; }
+}
+
+<span class="kw">class</span> <span class="op">PatoDeBorracha</span> <span class="kw">extends</span> Pato {
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> voar() {
+        <span class="kw">throw new</span> UnsupportedOperationException(<span class="str">"Não voa!"</span>);
+    }
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> nadar() {
+        <span class="kw">throw new</span> UnsupportedOperationException(<span class="str">"Não nada de verdade!"</span>);
+    }
+}</div>
+        </div>
+        <div class="callout callout-red" style="max-width:680px">
+          <span class="mi mi-sm" style="color:var(--false-c)">warning</span>
+          Código que chama <code>pato.voar()</code> vai <strong>explodir</strong> com PatoDeBorracha.
+          A subclasse <strong>mentiu</strong> sobre o que pode fazer.
+        </div>
+      </div>
+
+      <!-- ══════════ S7 — VIOLAÇÃO CLÁSSICA: RETÂNGULO/QUADRADO ══════════ -->
+      <div class="slide" id="s7">
+        <div class="eyebrow">Violação Clássica 2</div>
+        <h2 class="title">Retângulo <em>≠</em> Quadrado no Código</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Mundo Real</p>
+            <div class="gc" style="padding:20px 24px">
+              <p style="font-size:0.9rem;color:var(--dim);line-height:1.7">
+                Matematicamente: <strong style="color:var(--white)">Quadrado É um Retângulo</strong>
+                (todos os lados iguais). Parece óbvio herdar, certo?
+              </p>
+              <div style="display:flex;gap:16px;margin-top:12px;justify-content:center">
+                <div style="text-align:center">
+                  <div style="font-size:2rem">▭</div>
+                  <div style="font-size:0.75rem;color:var(--dim)">Retângulo<br/>largura ≠ altura</div>
+                </div>
+                <div style="font-size:1.5rem;color:var(--dim);line-height:3rem">⊃</div>
+                <div style="text-align:center">
+                  <div style="font-size:2rem">■</div>
+                  <div style="font-size:0.75rem;color:var(--dim)">Quadrado<br/>lado = lado</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">No Código — PROBLEMA</p>
+            <div class="code code-bad" style="font-size:0.72rem"><span class="kw">class</span> <span class="op">Quadrado</span> <span class="kw">extends</span> Retangulo {
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> setLargura(<span class="kw">double</span> l) {
+        largura = l;
+        altura = l; <span class="cm">// sobrescreve a altura!</span>
+    }
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> setAltura(<span class="kw">double</span> a) {
+        altura = a;
+        largura = a; <span class="cm">// sobrescreve a largura!</span>
+    }
+}
+
+Retangulo r = <span class="kw">new</span> Quadrado();
+r.setLargura(5);
+r.setAltura(3);
+<span class="cm">// Esperado: 5×3 = 15</span>
+<span class="cm">// Real:     3×3 = 9  ← ERRADO!</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S8 — O DEBUGGER DO RETÂNGULO ══════════ -->
+      <div class="slide" id="s8">
+        <div class="eyebrow">Passo a Passo</div>
+        <h2 class="title">Por que a <em>Área Dá Errado</em>?</h2>
+        <div class="line"></div>
+        <div class="dbg" style="max-width:780px" id="dbg1">
+          <div class="dbg-bar">
+            <div class="dbg-label"><div class="dbg-dot"></div>Simulação — Quadrado como Retângulo</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="dbg-dots" id="dbg1-dots"></div>
+              <div class="dbg-step-info" id="dbg1-info">Passo 1 de 5</div>
+              <div class="dbg-controls">
+                <button class="dbg-btn" id="dbg1-prev" onclick="dbgStep('dbg1',-1)" disabled>‹ Anterior</button>
+                <button class="dbg-btn run" id="dbg1-next" onclick="dbgStep('dbg1',1)">Próximo ›</button>
+              </div>
+            </div>
+          </div>
+          <div class="dbg-code" id="dbg1-code"></div>
+          <div class="dbg-exp" id="dbg1-exp">Clique em <strong>Próximo</strong> para executar linha por linha.</div>
+        </div>
+      </div>
+
+      <!-- ══════════ S9 — TERCEIRA VIOLAÇÃO: MÉTODO VAZIO ══════════ -->
+      <div class="slide" id="s9">
+        <div class="eyebrow">Violação Silenciosa</div>
+        <h2 class="title">Corpo Vazio é <em>Pior</em> que Exceção</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Lançar exceção — ruim</p>
+            <div class="code code-bad" style="font-size:0.75rem"><span class="kw">class</span> <span class="op">Pinguim</span> <span class="kw">extends</span> Ave {
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> voar() {
+        <span class="kw">throw new</span>
+          UnsupportedOperationException(
+            <span class="str">"Não voa!"</span>
+          );
+    }
+}</div>
+            <div class="callout callout-red" style="margin-top:8px;font-size:0.8rem">
+              Pelo menos o programa <strong>avisa</strong> que algo está errado.
+            </div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Corpo vazio — PIOR</p>
+            <div class="code code-bad" style="font-size:0.75rem"><span class="kw">class</span> <span class="op">Pinguim</span> <span class="kw">extends</span> Ave {
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> voar() {
+        <span class="cm">// "não faz nada, tá bom né?"</span>
+    }
+}</div>
+            <div class="callout callout-red" style="margin-top:8px;font-size:0.8rem">
+              O programa <strong>não avisa</strong>. O código chama voar(), "funciona", mas
+              o pinguim nunca voou. <strong>Bug silencioso.</strong>
+            </div>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:880px">
+          <span class="mi mi-sm" style="color:var(--gold)">warning</span>
+          Ambos violam o LSP. A violação silenciosa é a mais perigosa — o teste passa, o bug chega em produção.
+        </div>
+      </div>
+
+      <!-- ══════════ S10 — INSTANCEOF É SINAL DE PROBLEMA ══════════ -->
+      <div class="slide" id="s10">
+        <div class="eyebrow">Diagnóstico</div>
+        <h2 class="title"><code style="color:var(--false-c)">instanceof</code> = Sinal de Alerta</h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:16px">
+          <p style="font-size:0.88rem;color:var(--dim);line-height:1.7;margin-bottom:12px">
+            Se o código que <em>usa</em> a abstração precisa checar o tipo real, é porque a abstração falhou:
+          </p>
+          <div class="code code-bad"><span class="cm">// ❌ Isso grita "LSP violado!"</span>
+<span class="kw">void</span> <span class="op">fazerAveVoar</span>(Ave ave) {
+    <span class="kw">if</span> (ave <span class="kw">instanceof</span> Pinguim) {
+        ((Pinguim) ave).nadar(); <span class="cm">// precisou checar o tipo!</span>
+    } <span class="kw">else</span> {
+        ave.voar();
+    }
+}
+
+<span class="cm">// E quando aparecer Ema? Avestruz? Kiwi?</span>
+<span class="cm">// Mais um if/else — o método nunca fica estável.</span></div>
+        </div>
+        <div class="callout callout-red" style="max-width:680px">
+          <span class="mi mi-sm" style="color:var(--false-c)">error</span>
+          <strong>Regra prática:</strong> se você usa <code>instanceof</code> ou <code>try/catch</code> para
+          usar uma subclasse no lugar da base, há violação de LSP.
+        </div>
+      </div>
+
+      <!-- ══════════ S11 — HIERARQUIA DE AVES ERRADA ══════════ -->
+      <div class="slide" id="s11">
+        <div class="eyebrow">O Problema das Aves</div>
+        <h2 class="title">Hierarquia <em>Honesta</em> vs <em>Mentirosa</em></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px;margin-bottom:16px">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:10px">Hierarquia mentirosa ❌</p>
+            <div class="code code-bad" style="font-size:0.75rem"><span class="kw">class</span> Ave {
+    <span class="kw">void</span> voar() { ... }  <span class="cm">// promessa!</span>
+}
+
+<span class="kw">class</span> Pardal <span class="kw">extends</span> Ave { } <span class="cm">// ok</span>
+<span class="kw">class</span> Aguia  <span class="kw">extends</span> Ave { } <span class="cm">// ok</span>
+<span class="kw">class</span> Pinguim <span class="kw">extends</span> Ave {
+    <span class="kw">void</span> voar() {
+        <span class="cm">// MENTIRA — eu não voo!</span>
+        <span class="kw">throw new</span> RuntimeException();
+    }
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:10px">Hierarquia honesta ✓</p>
+            <div class="code code-good" style="font-size:0.75rem"><span class="kw">interface</span> Ave {
+    <span class="kw">void</span> comer();   <span class="cm">// toda ave come</span>
+}
+<span class="kw">interface</span> Voadora {
+    <span class="kw">void</span> voar();    <span class="cm">// só quem voa</span>
+}
+<span class="kw">interface</span> Nadadora {
+    <span class="kw">void</span> nadar();   <span class="cm">// só quem nada</span>
+}
+
+<span class="kw">class</span> Pardal  <span class="kw">implements</span> Ave, Voadora { }
+<span class="kw">class</span> Pinguim <span class="kw">implements</span> Ave, Nadadora { }
+<span class="cm">// sem mentiras, sem exceções!</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S12 — GRID DE AVES ══════════ -->
+      <div class="slide" id="s12">
+        <div class="eyebrow">Exemplo Visual</div>
+        <h2 class="title">Cada <em>Ave</em>, seu <em>Contrato Honesto</em></h2>
+        <div class="line"></div>
+        <div class="bird-grid" style="margin-bottom:16px">
+          <div class="bird-card">
+            <div class="bird-emoji">🐦</div>
+            <div class="bird-name">Pardal</div>
+            <div class="bird-caps">
+              <div class="bird-cap ok">Ave ✓</div>
+              <div class="bird-cap ok">Voa ✓</div>
+            </div>
+          </div>
+          <div class="bird-card">
+            <div class="bird-emoji">🦅</div>
+            <div class="bird-name">Águia</div>
+            <div class="bird-caps">
+              <div class="bird-cap ok">Ave ✓</div>
+              <div class="bird-cap ok">Voa ✓</div>
+            </div>
+          </div>
+          <div class="bird-card">
+            <div class="bird-emoji">🦆</div>
+            <div class="bird-name">Pato</div>
+            <div class="bird-caps">
+              <div class="bird-cap ok">Ave ✓</div>
+              <div class="bird-cap ok">Voa ✓</div>
+              <div class="bird-cap ok">Nada ✓</div>
+            </div>
+          </div>
+          <div class="bird-card">
+            <div class="bird-emoji">🐧</div>
+            <div class="bird-name">Pinguim</div>
+            <div class="bird-caps">
+              <div class="bird-cap ok">Ave ✓</div>
+              <div class="bird-cap no">Voa ✗</div>
+              <div class="bird-cap ok">Nada ✓</div>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:680px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">check_circle</span>
+          Nenhuma classe mente. Cada uma implementa <strong>apenas o que realmente pode fazer</strong>.
+          Código que usa <code>Voadora</code> nunca recebe Pinguim — e nunca vai quebrar.
+        </div>
+      </div>
+
+      <!-- ══════════ S13 — PRÉ E PÓS CONDIÇÕES ══════════ -->
+      <div class="slide" id="s13">
+        <div class="eyebrow">Regras Formais</div>
+        <h2 class="title"><em>Pré</em> e <em>Pós</em>-Condições</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px;margin-bottom:16px">
+          <div class="cmp-box">
+            <div class="cmp-h" style="color:var(--teal)">
+              <span class="mi mi-sm">input</span> Pré-condição
+            </div>
+            <p style="font-size:0.84rem;color:var(--dim);line-height:1.7;margin-bottom:10px">
+              O que a subclasse <strong style="color:var(--white)">exige</strong> para funcionar.
+              Nunca pode exigir <em>mais</em> que a superclasse.
+            </p>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div>
+                <p style="font-size:0.82rem;color:var(--white)">Base aceita: valor &gt; 0</p>
+                <p style="font-size:0.78rem;color:var(--dim)">Sub aceita: valor &gt;= 0 → OK (mais permissiva)</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✗</div>
+              <div>
+                <p style="font-size:0.82rem;color:var(--white)">Base aceita: valor &gt; 0</p>
+                <p style="font-size:0.78rem;color:var(--dim)">Sub aceita: valor &gt;= 100 → VIOLA (mais restritiva)</p>
+              </div>
+            </div>
+          </div>
+          <div class="cmp-box">
+            <div class="cmp-h" style="color:var(--gold)">
+              <span class="mi mi-sm">output</span> Pós-condição
+            </div>
+            <p style="font-size:0.84rem;color:var(--dim);line-height:1.7;margin-bottom:10px">
+              O que a subclasse <strong style="color:var(--white)">garante</strong> após executar.
+              Nunca pode garantir <em>menos</em> que a superclasse.
+            </p>
+            <div class="step">
+              <div class="sn sn-green">✓</div>
+              <div>
+                <p style="font-size:0.82rem;color:var(--white)">Base garante: saldo aumenta</p>
+                <p style="font-size:0.78rem;color:var(--dim)">Sub garante: saldo aumenta E notifica → OK</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="sn sn-red">✗</div>
+              <div>
+                <p style="font-size:0.82rem;color:var(--white)">Base garante: saldo aumenta</p>
+                <p style="font-size:0.78rem;color:var(--dim)">Sub pode não aumentar o saldo → VIOLA</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:780px">
+          <span class="mi mi-sm" style="color:var(--gold)">lightbulb</span>
+          Analogia: o contrato de entrega promete "3 dias". A sub pode entregar em <strong>1 dia</strong> (melhor),
+          mas nunca em <strong>7 dias</strong> (pior).
+        </div>
+      </div>
+
+      <!-- ══════════ S14 — SOLUÇÃO: INTERFACES DE CAPACIDADE ══════════ -->
+      <div class="slide" id="s14">
+        <div class="eyebrow">A Solução</div>
+        <h2 class="title">Interfaces de <em>Capacidade</em></h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:16px">
+          <p style="font-size:0.9rem;color:var(--dim);line-height:1.7;margin-bottom:14px">
+            Em vez de herdar de uma superclasse com comportamentos que nem todos podem cumprir,
+            <strong style="color:var(--white)">componha interfaces pequenas por capacidade.</strong>
+          </p>
+          <div class="code code-good"><span class="kw">interface</span> Ave        { <span class="kw">void</span> comer(); <span class="kw">void</span> emitirSom(); }
+<span class="kw">interface</span> AveVoadora { <span class="kw">void</span> voar();   }
+<span class="kw">interface</span> AveNadadora { <span class="kw">void</span> nadar();  }
+<span class="kw">interface</span> AveCorredeira { <span class="kw">void</span> correr(); }
+
+<span class="cm">// Cada classe implementa só o que REALMENTE pode fazer</span>
+<span class="kw">class</span> Pardal  <span class="kw">implements</span> Ave, AveVoadora               { }
+<span class="kw">class</span> Pinguim <span class="kw">implements</span> Ave, AveNadadora              { }
+<span class="kw">class</span> Pato    <span class="kw">implements</span> Ave, AveVoadora, AveNadadora  { }
+<span class="kw">class</span> Ema     <span class="kw">implements</span> Ave, AveCorredeira             { }
+
+<span class="cm">// Código que usa só aves voadoras — NUNCA vai receber Pinguim</span>
+<span class="kw">void</span> realizarVoo(AveVoadora ave) { ave.voar(); }</div>
+        </div>
+      </div>
+
+      <!-- ══════════ S15 — CONTA BANCÁRIA ══════════ -->
+      <div class="slide" id="s15">
+        <div class="eyebrow">Exemplo Real</div>
+        <h2 class="title">Conta <em>Somente Leitura</em></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:900px">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Viola LSP ❌</p>
+            <div class="code code-bad" style="font-size:0.72rem"><span class="kw">class</span> ContaBancaria {
+    <span class="kw">void</span> depositar(<span class="kw">double</span> v) { ... }
+    <span class="kw">void</span> sacar(<span class="kw">double</span> v)    { ... }
+}
+
+<span class="kw">class</span> ContaSomenteLeitura
+    <span class="kw">extends</span> ContaBancaria {
+
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> depositar(<span class="kw">double</span> v) {
+        <span class="kw">throw new</span>
+          UnsupportedOperationException();
+    }
+    <span class="ann">@Override</span>
+    <span class="kw">void</span> sacar(<span class="kw">double</span> v) {
+        <span class="kw">throw new</span>
+          UnsupportedOperationException();
+    }
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">Respeita LSP ✓</p>
+            <div class="code code-good" style="font-size:0.72rem"><span class="cm">// Separamos as capacidades</span>
+<span class="kw">interface</span> Conta {
+    <span class="kw">double</span> getSaldo();
+    String getTitular();
+}
+
+<span class="kw">interface</span> ContaOperavel <span class="kw">extends</span> Conta {
+    <span class="kw">void</span> depositar(<span class="kw">double</span> v);
+    <span class="kw">void</span> sacar(<span class="kw">double</span> v);
+}
+
+<span class="cm">// Conta corrente: pode tudo</span>
+<span class="kw">class</span> ContaCorrente
+    <span class="kw">implements</span> ContaOperavel { }
+
+<span class="cm">// Só leitura: não mente sobre sacar/depositar</span>
+<span class="kw">class</span> ContaVisualizacao
+    <span class="kw">implements</span> Conta { }</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S16 — DEBUGGER INTERATIVO ══════════ -->
+      <div class="slide" id="s16">
+        <div class="eyebrow">Passo a Passo</div>
+        <h2 class="title">LSP em <em>Ação</em></h2>
+        <div class="line"></div>
+        <div class="dbg" style="max-width:820px" id="dbg2">
+          <div class="dbg-bar">
+            <div class="dbg-label"><div class="dbg-dot"></div>Simulação — Hierarquia correta de Aves</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="dbg-dots" id="dbg2-dots"></div>
+              <div class="dbg-step-info" id="dbg2-info">Passo 1 de 6</div>
+              <div class="dbg-controls">
+                <button class="dbg-btn" id="dbg2-prev" onclick="dbgStep('dbg2',-1)" disabled>‹ Anterior</button>
+                <button class="dbg-btn run" id="dbg2-next" onclick="dbgStep('dbg2',1)">Próximo ›</button>
+              </div>
+            </div>
+          </div>
+          <div class="dbg-code" id="dbg2-code"></div>
+          <div class="dbg-exp" id="dbg2-exp">Clique em <strong>Próximo</strong> para executar linha por linha.</div>
+        </div>
+      </div>
+
+      <!-- ══════════ S17 — CHECKLIST ══════════ -->
+      <div class="slide" id="s17">
+        <div class="eyebrow">Como Identificar</div>
+        <h2 class="title">Sinais de <em>Violação</em> do LSP</h2>
+        <div class="line"></div>
+        <div class="gc" style="max-width:780px">
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:600">Método lança <code>UnsupportedOperationException</code></p>
+              <p style="font-size:0.82rem;color:var(--dim)">A subclasse prometeu algo que não pode cumprir.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:600">Método sobrescrito com corpo vazio</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Pior que exceção — bug silencioso que não aparece nos testes.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:600">Código cliente usa <code>instanceof</code></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Quem usa a abstração precisou saber o tipo real — hierarquia falhou.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:600">Resultado diferente do esperado sem exceção</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Área 9 quando esperava 15. O contrato foi quebrado silenciosamente.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:600">Subclasse mais restritiva na entrada</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Base aceita qualquer valor > 0; sub exige valor >= 100.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S18 — LSP + OCP ══════════ -->
+      <div class="slide" id="s18">
+        <div class="eyebrow">Conexão com SOLID</div>
+        <h2 class="title">LSP + <em>OCP</em> = Hierarquias Poderosas</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:860px;margin-bottom:16px">
+          <div class="cmp-box" style="border-color:rgba(0,163,184,0.3);background:rgba(0,163,184,0.04)">
+            <div class="cmp-h" style="color:var(--teal)">
+              <span class="mi mi-sm">extension</span> OCP garante:
+            </div>
+            <p style="font-size:0.86rem;color:var(--dim);line-height:1.7">
+              Você pode <strong style="color:var(--white)">adicionar novos tipos</strong> sem modificar o código existente.
+              Extensão via novas classes.
+            </p>
+          </div>
+          <div class="cmp-box" style="border-color:rgba(52,210,122,0.3);background:rgba(52,210,122,0.04)">
+            <div class="cmp-h" style="color:var(--true-c)">
+              <span class="mi mi-sm">swap_horiz</span> LSP garante:
+            </div>
+            <p style="font-size:0.86rem;color:var(--dim);line-height:1.7">
+              Essas novas classes podem ser usadas em <strong style="color:var(--white)">qualquer lugar</strong>
+              que a base era usada. A extensão é <em>segura</em>.
+            </p>
+          </div>
+        </div>
+        <div class="gc gc-md" style="text-align:center;padding:20px 28px">
+          <p style="font-size:0.95rem;color:var(--dim);line-height:1.7">
+            O OCP diz <em>"adicione sem modificar"</em>.<br/>
+            O LSP garante que o que foi adicionado <strong style="color:var(--white)">funciona onde esperado</strong>.<br/>
+            Juntos: você cresce o sistema com <strong style="color:var(--true-c)">confiança total</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- ══════════ S19 — QUIZ ══════════ -->
+      <div class="slide" id="s19">
+        <div class="eyebrow">Fixação</div>
+        <h2 class="title">Quiz Rápido <em>⚡</em></h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <p id="qz-question" style="font-size:1rem;color:var(--white);font-weight:600;margin-bottom:20px;min-height:48px"></p>
+          <div id="qz-opts" style="display:flex;flex-direction:column;gap:10px"></div>
+          <p id="qz-feedback" style="font-size:0.86rem;color:var(--dim);margin-top:16px;min-height:24px;line-height:1.6"></p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+            <span id="qz-progress" style="font-size:0.78rem;color:var(--dim2)"></span>
+            <button class="nbtn p" id="qz-next-btn" onclick="quizNext()" style="display:none">Próxima →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S20 — ARMADILHAS ══════════ -->
+      <div class="slide" id="s20">
+        <div class="eyebrow">Cuidados</div>
+        <h2 class="title">Armadilhas <em>Comuns</em></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:860px">
+          <div class="oc">
+            <div class="sym">🔀</div>
+            <div class="nm">"É-um" do mundo real ≠ herança</div>
+            <div class="ds">Quadrado É um Retângulo na matemática, mas no código têm comportamentos incompatíveis. Modele pelo comportamento, não pela categoria real.</div>
+          </div>
+          <div class="oc">
+            <div class="sym">🤫</div>
+            <div class="nm">Violação silenciosa</div>
+            <div class="ds">Corpo vazio não gera exceção mas quebra a lógica. Pode passar em todos os testes e só aparecer em produção.</div>
+          </div>
+          <div class="oc">
+            <div class="sym">🏗️</div>
+            <div class="nm">Herança profunda</div>
+            <div class="ds">Hierarquias de 4+ níveis acumulam contratos que ficam cada vez mais difíceis de honrar. Prefira composição.</div>
+          </div>
+          <div class="oc">
+            <div class="sym">📌</div>
+            <div class="nm">Sub mais restritiva</div>
+            <div class="ds">Adicionar validações extras na subclasse (valor mínimo, tipo obrigatório) que a superclasse não exigia viola a pré-condição.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S21 — RESUMO FINAL ══════════ -->
+      <div class="slide" id="s21">
+        <div class="eyebrow">Resumo</div>
+        <h2 class="title">LSP em <em>Uma Página</em></h2>
+        <div class="line"></div>
+        <div class="gc" style="max-width:840px">
+          <div class="step">
+            <div class="sn" style="background:rgba(0,163,184,0.12);border-color:rgba(0,163,184,0.3)">L</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:700">Princípio</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Subclasse deve poder substituir a superclasse <strong style="color:var(--white)">sem que o programa precise saber</strong>.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">!</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:700">Sinais de Problema</p>
+              <p style="font-size:0.82rem;color:var(--dim)">
+                <code>UnsupportedOperationException</code> · corpo vazio · <code>instanceof</code> · resultado errado sem exceção
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-green">✓</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:700">Solução</p>
+              <p style="font-size:0.82rem;color:var(--dim)">
+                Interfaces pequenas de capacidade · modelar por comportamento, não por "é-um" · preferir composição
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn" style="background:rgba(200,149,42,0.12);border-color:rgba(200,149,42,0.3);color:var(--gold)">▲</div>
+            <div>
+              <p style="font-size:0.9rem;color:var(--white);font-weight:700">Regras Formais</p>
+              <p style="font-size:0.82rem;color:var(--dim)">
+                Pré-condição: nunca mais restritiva ·
+                Pós-condição: nunca garante menos ·
+                Invariante: propriedades sempre mantidas
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:780px;text-align:center;margin-top:14px">
+          <span class="mi mi-sm" style="color:var(--teal)">format_quote</span>
+          <strong>"Se você precisa de instanceof para usar a subclasse, a hierarquia está mentindo para você."</strong>
+        </div>
+      </div>
+
+    </div><!-- /#deck -->
+
+    <!-- ─── FOOTER ─── -->
+    <div id="footer">
+      <div class="f-brand">
+        <span class="mi" style="color:var(--teal);font-size:1.3rem">swap_horiz</span>
+        <div class="f-sep"></div>
+        <div class="f-name">
+          <div class="l1">SOLID · Aula 03</div>
+          <div class="l2">Liskov Substitution</div>
+        </div>
+      </div>
+      <div class="f-bar"></div>
+      <div class="f-nav">
+        <span class="f-count" id="slide-counter">1 / 21</span>
+        <button class="nbtn" id="btn-prev" onclick="nav(-1)">← Anterior</button>
+        <button class="nbtn p" id="btn-next" onclick="nav(1)">Próximo →</button>
+        <button class="nbtn" onclick="toggleLight()" title="Alternar tema">☀</button>
+      </div>
+    </div>
+
+    <script>
+      /* ─── SLIDES ─── */
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      let cur = 0;
+      let animating = false;
+
+      function nav(dir) {
+        if (animating) return;
+        const next = cur + dir;
+        if (next < 0 || next >= slides.length) return;
+        animating = true;
+        const exitClass = dir > 0 ? 'anim-exit-fwd' : 'anim-exit-bwd';
+        const enterClass = dir > 0 ? 'anim-enter-fwd' : 'anim-enter-bwd';
+        slides[cur].classList.add(exitClass);
+        slides[cur].classList.remove('active');
+        slides[next].classList.add(enterClass, 'active');
+        document.body.classList.add('cur-nav');
+        setTimeout(() => {
+          slides[cur].classList.remove(exitClass);
+          slides[next].classList.remove(enterClass);
+          cur = next;
+          document.getElementById('slide-counter').textContent = (cur + 1) + ' / ' + slides.length;
+          document.getElementById('prog').style.width = ((cur + 1) / slides.length * 100) + '%';
+          document.getElementById('btn-prev').disabled = cur === 0;
+          document.getElementById('btn-next').disabled = cur === slides.length - 1;
+          document.body.classList.remove('cur-nav');
+          animating = false;
+          if (cur === 18) initQuiz();
+        }, 560);
+      }
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nav(1);
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nav(-1);
+      });
+
+      document.getElementById('prog').style.width = (1 / slides.length * 100) + '%';
+      document.getElementById('btn-prev').disabled = true;
+
+      /* ─── CUSTOM CURSOR ─── */
+      const dot = document.getElementById('cur-dot');
+      const ring = document.getElementById('cur-ring');
+      const glow = document.getElementById('cur-glow');
+      let mx = 0, my = 0, rx = 0, ry = 0, gx = 0, gy = 0;
+      document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+      (function loop() {
+        rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
+        gx += (mx - gx) * 0.07; gy += (my - gy) * 0.07;
+        dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+        ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+        glow.style.left = gx + 'px'; glow.style.top = gy + 'px';
+        requestAnimationFrame(loop);
+      })();
+      document.querySelectorAll('button,a,[onclick]').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('cur-hover'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cur-hover'));
+      });
+      document.addEventListener('mousedown', () => document.body.classList.add('cur-click'));
+      document.addEventListener('mouseup', () => document.body.classList.remove('cur-click'));
+
+      /* ─── LIGHT MODE ─── */
+      function toggleLight() { document.body.classList.toggle('light-mode'); }
+
+      /* ─── DEBUGGER 1 — Retangulo / Quadrado ─── */
+      const dbg1Data = {
+        lines: [
+          { c: '<span class="kw">Retangulo</span> r = <span class="kw">new</span> <span class="op">Quadrado</span>();', exp: '<strong>Criamos um Quadrado, mas guardamos como Retangulo.</strong> Para o compilador, tudo certo — Quadrado "é-um" Retangulo.' },
+          { c: 'r.<span class="op">setLargura</span>(5);', exp: '<strong>setLargura(5) é chamado.</strong> No Quadrado, esse método <em>também muda a altura para 5</em>. A largura <em>e</em> a altura agora são 5.' },
+          { c: 'r.<span class="op">setAltura</span>(3);', exp: '<strong>setAltura(3) é chamado.</strong> No Quadrado, esse método <em>também muda a largura para 3</em>. Agora largura <em>e</em> altura são 3.' },
+          { c: '<span class="kw">double</span> area = r.<span class="op">calcularArea</span>();', exp: '<strong>calcularArea() = largura × altura = 3 × 3 = 9.</strong> Esperávamos 15 (5×3), recebemos 9 (3×3). O contrato foi quebrado!' },
+          { c: '<span class="cm">// Esperado: 15 | Real: 9 ← VIOLAÇÃO DO LSP</span>', exp: '<strong>Bug silencioso.</strong> Não houve exceção. O programa "funcionou" — mas o resultado está errado. Quem chamou a função confiou no contrato e foi enganado.' },
+        ],
+        cur: -1
+      };
+
+      const dbg2Data = {
+        lines: [
+          { c: 'AveVoadora[] voadoras = {<span class="kw">new</span> Pardal(), <span class="kw">new</span> Aguia(), <span class="kw">new</span> Pato()};', exp: '<strong>Apenas aves que implementam AveVoadora entram nessa lista.</strong> Pinguim nunca aparecerá aqui — a linguagem garante isso em tempo de compilação.' },
+          { c: '<span class="kw">for</span> (AveVoadora ave : voadoras) { ave.<span class="op">voar</span>(); }', exp: '<strong>Iteramos e chamamos voar() em cada uma.</strong> Nenhuma exceção é possível — todas honram o contrato de AveVoadora.' },
+          { c: '<span class="cm">// Pardal → "Pardal voando baixinho..."</span>', exp: '<strong>Pardal voa.</strong> Implementa AveVoadora corretamente. Contrato respeitado.' },
+          { c: '<span class="cm">// Aguia → "Aguia planando nas correntes de ar..."</span>', exp: '<strong>Águia voa.</strong> Implementa AveVoadora corretamente. Contrato respeitado.' },
+          { c: '<span class="cm">// Pato → "Pato voando sobre o lago."</span>', exp: '<strong>Pato voa E nada.</strong> Implementa AveVoadora e AveNadadora. Sem mentiras.' },
+          { c: 'AveNadadora pinguim = <span class="kw">new</span> Pinguim();\npinguim.<span class="op">nadar</span>(); <span class="cm">// "Pinguim nadando a 30km/h!"</span>', exp: '<strong>Pinguim é usado como AveNadadora — sua capacidade real.</strong> Nunca prometeu voar, nunca vai quebrar. Código 100% confiável.' },
+        ],
+        cur: -1
+      };
+
+      function initDbg(id, data) {
+        const dots = document.getElementById(id + '-dots');
+        dots.innerHTML = data.lines.map((_,i) => `<span></span>`).join('');
+        renderDbg(id, data);
+      }
+
+      function renderDbg(id, data) {
+        const codeEl = document.getElementById(id + '-code');
+        const expEl  = document.getElementById(id + '-exp');
+        const infoEl = document.getElementById(id + '-info');
+        const prevBtn = document.getElementById(id + '-prev');
+        const nextBtn = document.getElementById(id + '-next');
+        const dots = document.getElementById(id + '-dots').querySelectorAll('span');
+
+        codeEl.innerHTML = data.lines.map((l, i) => `
+          <div class="dbg-line${i === data.cur ? ' active' : ''}">
+            <div class="dbg-lnum">${i + 1}</div>
+            <div class="dbg-arr">▶</div>
+            <div class="dbg-content">${l.c}</div>
+          </div>`).join('');
+
+        if (data.cur >= 0) {
+          expEl.innerHTML = data.lines[data.cur].exp;
+        } else {
+          expEl.innerHTML = 'Clique em <strong>Próximo</strong> para executar linha por linha.';
+        }
+
+        infoEl.textContent = 'Passo ' + (data.cur + 2) + ' de ' + (data.lines.length + 1);
+        prevBtn.disabled = data.cur < 0;
+        nextBtn.disabled = data.cur >= data.lines.length - 1;
+        nextBtn.textContent = data.cur >= data.lines.length - 2 ? 'Fim ✓' : 'Próximo ›';
+
+        dots.forEach((d, i) => d.classList.toggle('on', i === data.cur));
+      }
+
+      function dbgStep(id, dir) {
+        const data = id === 'dbg1' ? dbg1Data : dbg2Data;
+        data.cur = Math.max(-1, Math.min(data.lines.length - 1, data.cur + dir));
+        renderDbg(id, data);
+      }
+
+      initDbg('dbg1', dbg1Data);
+      initDbg('dbg2', dbg2Data);
+
+      /* ─── QUIZ ─── */
+      const quizData = [
+        {
+          q: 'Uma subclasse Pinguim herda de Ave e sobrescreve voar() lançando UnsupportedOperationException. Isso é uma violação do LSP?',
+          opts: [
+            'Não, desde que documentado no Javadoc.',
+            'Sim, porque código que usa Ave vai quebrar ao receber Pinguim.',
+            'Não, porque Pinguim é realmente uma Ave.',
+            'Sim, mas só se o método for chamado em produção.',
+          ],
+          correct: 1,
+          feedback: 'Correto! O LSP garante que qualquer subclasse pode substituir a superclasse sem quebrar o programa — documentação não é suficiente para corrigir isso.'
+        },
+        {
+          q: 'Qual dos cenários abaixo NÃO viola o LSP?',
+          opts: [
+            'Subclasse que retorna null onde a superclasse sempre retorna um valor válido.',
+            'Subclasse que aceita qualquer valor ≥ 0 onde a superclasse exige valor > 0.',
+            'Subclasse que exige valor ≥ 100 onde a superclasse aceita valor > 0.',
+            'Subclasse com corpo vazio no método voar() herdado de Ave.',
+          ],
+          correct: 1,
+          feedback: 'Correto! A subclasse que é MAIS PERMISSIVA (aceita mais casos) respeita o LSP. A pré-condição pode ser relaxada, nunca restringida.'
+        },
+        {
+          q: 'Você encontra esse código: if (animal instanceof Pinguim) { ... } else { animal.voar(); }. O que isso indica?',
+          opts: [
+            'Boa prática — sempre cheque o tipo antes de chamar métodos.',
+            'Violação do LSP — o código precisou conhecer o tipo real da subclasse.',
+            'Violação do SRP — a função faz coisas demais.',
+            'Nada de errado, é uso normal de instanceof em Java.',
+          ],
+          correct: 1,
+          feedback: 'Correto! Se o código que usa a abstração precisa checar o tipo real com instanceof, é sinal que a hierarquia não é confiável — violação do LSP.'
+        },
+        {
+          q: 'No problema Retângulo/Quadrado, qual é a MELHOR solução para respeitar o LSP?',
+          opts: [
+            'Criar Quadrado como subclasse de Retângulo e documentar o comportamento diferente.',
+            'Criar Retângulo como subclasse de Quadrado.',
+            'Criar interface Forma com calcularArea() e fazer Retangulo e Quadrado implementar independentemente.',
+            'Usar getters e setters privados para esconder o problema.',
+          ],
+          correct: 2,
+          feedback: 'Correto! Quando dois conceitos têm comportamentos incompatíveis, a solução é criar uma abstração comum com apenas o que é compatível, sem herança direta entre eles.'
+        },
+        {
+          q: 'Qual frase melhor resume o LSP?',
+          opts: [
+            '"Aberto para extensão, fechado para modificação."',
+            '"Uma classe deve ter apenas uma razão para mudar."',
+            '"Subclasses devem ser substituíveis pelas superclasses sem quebrar o programa."',
+            '"Dependa de abstrações, não de implementações."',
+          ],
+          correct: 2,
+          feedback: 'Correto! Essa é a essência do LSP. As outras frases descrevem OCP, SRP e DIP respectivamente.'
+        },
+      ];
+
+      let qzIdx = 0, qzScore = 0, qzDone = false;
+
+      function initQuiz() {
+        qzIdx = 0; qzScore = 0; qzDone = false;
+        renderQuiz();
+      }
+
+      function renderQuiz() {
+        if (qzIdx >= quizData.length) {
+          document.getElementById('qz-question').textContent = 'Quiz concluído! 🎉';
+          document.getElementById('qz-opts').innerHTML = '';
+          document.getElementById('qz-feedback').innerHTML = `Você acertou <strong>${qzScore} de ${quizData.length}</strong> questões!`;
+          document.getElementById('qz-progress').textContent = '';
+          document.getElementById('qz-next-btn').style.display = 'none';
+          return;
+        }
+        const q = quizData[qzIdx];
+        document.getElementById('qz-question').textContent = q.q;
+        document.getElementById('qz-feedback').textContent = '';
+        document.getElementById('qz-next-btn').style.display = 'none';
+        document.getElementById('qz-progress').textContent = 'Questão ' + (qzIdx + 1) + ' de ' + quizData.length;
+        const optsEl = document.getElementById('qz-opts');
+        optsEl.innerHTML = q.opts.map((o, i) =>
+          `<button class="qopt" onclick="answerQuiz(${i})">${String.fromCharCode(65+i)}) ${o}</button>`
+        ).join('');
+      }
+
+      function answerQuiz(chosen) {
+        const q = quizData[qzIdx];
+        const btns = document.querySelectorAll('.qopt');
+        btns.forEach((b, i) => {
+          b.onclick = null;
+          if (i === q.correct) b.classList.add('ok');
+          else if (i === chosen && chosen !== q.correct) b.classList.add('no');
+        });
+        if (chosen === q.correct) qzScore++;
+        document.getElementById('qz-feedback').innerHTML = q.feedback;
+        document.getElementById('qz-next-btn').style.display = 'inline-block';
+        document.getElementById('qz-next-btn').textContent = qzIdx === quizData.length - 1 ? 'Ver resultado →' : 'Próxima →';
+      }
+
+      function quizNext() { qzIdx++; renderQuiz(); }
+    </script>
+  </body>
+</html>
