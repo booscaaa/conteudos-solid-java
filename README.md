@@ -34,14 +34,22 @@ conteudos-solid-java/
     │       ├── 02_aplicando_srp.java
     │       ├── 03_srp_em_servicos.java
     │       └── 04_srp_avancado.java
-    └── aula-02-ocp/
-        ├── README.md                  <- Open/Closed Principle
+    ├── aula-02-ocp/
+    │   ├── README.md                  <- Open/Closed Principle
+    │   ├── EXERCICIOS.md
+    │   └── exemplos/
+    │       ├── 01_violando_ocp.java
+    │       ├── 02_aplicando_ocp.java
+    │       ├── 03_ocp_com_interfaces.java
+    │       └── 04_ocp_strategy_pattern.java
+    └── aula-03-lsp/
+        ├── README.md                  <- Liskov Substitution Principle
         ├── EXERCICIOS.md
         └── exemplos/
-            ├── 01_violando_ocp.java
-            ├── 02_aplicando_ocp.java
-            ├── 03_ocp_com_interfaces.java
-            └── 04_ocp_strategy_pattern.java
+            ├── 01_violando_lsp.java
+            ├── 02_aplicando_lsp.java
+            ├── 03_lsp_contratos.java
+            └── 04_lsp_hierarquias.java
 ```
 
 ---
@@ -52,6 +60,7 @@ conteudos-solid-java/
 | --- | ----- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
 | 01  | S     | [Single Responsibility Principle](./aulas/aula-01-srp/README.md)     | Uma classe, uma responsabilidade, coesao, separacao de papeis   |
 | 02  | O     | [Open/Closed Principle](./aulas/aula-02-ocp/README.md)               | Extensao sem modificacao, polimorfismo, Strategy, interfaces     |
+| 03  | L     | [Liskov Substitution Principle](./aulas/aula-03-lsp/README.md)       | Substituicao segura, contratos, hierarquias honestas             |
 
 ---
 
