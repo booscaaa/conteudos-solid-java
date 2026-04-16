@@ -50,14 +50,22 @@ conteudos-solid-java/
     │       ├── 02_aplicando_lsp.java
     │       ├── 03_lsp_contratos.java
     │       └── 04_lsp_hierarquias.java
-    └── aula-04-isp/
-        ├── README.md                  <- Interface Segregation Principle
+    ├── aula-04-isp/
+    │   ├── README.md                  <- Interface Segregation Principle
+    │   ├── EXERCICIOS.md
+    │   └── exemplos/
+    │       ├── 01_violando_isp.java
+    │       ├── 02_aplicando_isp.java
+    │       ├── 03_isp_interfaces.java
+    │       └── 04_isp_avancado.java
+    └── aula-05-dip/
+        ├── README.md                  <- Dependency Inversion Principle
         ├── EXERCICIOS.md
         └── exemplos/
-            ├── 01_violando_isp.java
-            ├── 02_aplicando_isp.java
-            ├── 03_isp_interfaces.java
-            └── 04_isp_avancado.java
+            ├── 01_violando_dip.java
+            ├── 02_aplicando_dip.java
+            ├── 03_dip_inversao.java
+            └── 04_dip_avancado.java
 ```
 
 ---
@@ -70,6 +78,7 @@ conteudos-solid-java/
 | 02  | O     | [Open/Closed Principle](./aulas/aula-02-ocp/README.md)               | Extensao sem modificacao, polimorfismo, Strategy, interfaces     |
 | 03  | L     | [Liskov Substitution Principle](./aulas/aula-03-lsp/README.md)       | Substituicao segura, contratos, hierarquias honestas             |
 | 04  | I     | [Interface Segregation Principle](./aulas/aula-04-isp/README.md)     | Interfaces coesas, fat interface, segregacao por capacidade      |
+| 05  | D     | [Dependency Inversion Principle](./aulas/aula-05-dip/README.md)      | Abstracoes, injecao de dependencias, IoC, acoplamento            |
 
 ---
 
