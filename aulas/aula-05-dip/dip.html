@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOLID — Dependency Inversion Principle — CESURG</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #07090a;
+        --teal: #00a3b8;
+        --teal-dk: #005f73;
+        --gold: #c8952a;
+        --gold-lt: #e8aa3d;
+        --white: #ffffff;
+        --dim: rgba(255, 255, 255, 0.55);
+        --dim2: rgba(255, 255, 255, 0.28);
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-b: rgba(255, 255, 255, 0.08);
+        --true-c: #34d27a;
+        --false-c: #ff5c5c;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+
+      body.light-mode {
+        --bg: #f8fafc;
+        --teal: #0891b2;
+        --teal-dk: #164e63;
+        --gold: #b45309;
+        --gold-lt: #d97706;
+        --white: #0f172a;
+        --dim: #475569;
+        --dim2: #94a3b8;
+        --glass: rgba(15, 23, 42, 0.03);
+        --glass-b: rgba(15, 23, 42, 0.06);
+        --border: rgba(15, 23, 42, 0.08);
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--white);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: none;
+      }
+
+      /* ─── CUSTOM CURSOR ─── */
+      #cur-dot {
+        position: fixed;
+        width: 8px; height: 8px;
+        background: var(--white);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition: width 0.15s, height 0.15s, background 0.2s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-ring {
+        position: fixed;
+        width: 36px; height: 36px;
+        border: 1.5px solid rgba(255,255,255,0.5);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.4,0,0.2,1), height 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s, opacity 0.2s;
+        will-change: transform;
+      }
+      #cur-glow {
+        position: fixed;
+        width: 180px; height: 180px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9997;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(0,163,184,0.12) 0%, rgba(0,163,184,0.04) 45%, transparent 70%);
+        transition: opacity 0.3s;
+        will-change: transform;
+      }
+      body.cur-hover #cur-dot { width: 6px; height: 6px; background: var(--teal); }
+      body.cur-hover #cur-ring { width: 52px; height: 52px; border-color: var(--teal); }
+      body.cur-click #cur-dot { width: 12px; height: 12px; background: var(--gold); }
+      body.cur-click #cur-ring { width: 22px; height: 22px; border-color: var(--gold); border-width: 2px; }
+
+      /* ─── PROGRESS ─── */
+      #prog {
+        position: fixed; top: 0; left: 0; height: 2px;
+        background: linear-gradient(90deg, var(--teal), var(--gold));
+        transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
+        z-index: 100;
+      }
+
+      /* ─── DECK / SLIDES ─── */
+      #deck {
+        position: fixed; inset: 0; bottom: 64px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .slide {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 40px 60px;
+        opacity: 0; pointer-events: none;
+        overflow-y: auto;
+        gap: 0;
+      }
+      .slide.active { opacity: 1; pointer-events: auto; }
+
+      /* ─── ANIMATIONS ─── */
+      @keyframes exitFwd  { from { opacity:1; transform:translateX(0) scale(1); } to { opacity:0; transform:translateX(-60px) scale(0.97); } }
+      @keyframes exitBwd  { from { opacity:1; transform:translateX(0) scale(1); } to { opacity:0; transform:translateX(60px) scale(0.97); } }
+      @keyframes enterFwd { from { opacity:0; transform:translateX(60px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+      @keyframes enterBwd { from { opacity:0; transform:translateX(-60px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+      .anim-exit-fwd  { animation: exitFwd  0.56s cubic-bezier(0.4,0,0.2,1) forwards; }
+      .anim-exit-bwd  { animation: exitBwd  0.56s cubic-bezier(0.4,0,0.2,1) forwards; }
+      .anim-enter-fwd { animation: enterFwd 0.56s cubic-bezier(0.4,0,0.2,1) forwards; }
+      .anim-enter-bwd { animation: enterBwd 0.56s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+      /* ─── FOOTER ─── */
+      #footer {
+        position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 40px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+        z-index: 50;
+      }
+      .f-brand { display: flex; align-items: center; gap: 12px; }
+      .f-name .l1 { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--teal); }
+      .f-name .l2 { font-size: 0.65rem; color: var(--dim2); letter-spacing: 1px; }
+      .f-sep { width: 1px; height: 28px; background: var(--border); }
+      .f-bar { flex: 1; height: 2px; background: var(--border); margin: 0 24px; border-radius: 1px; }
+      .f-nav { display: flex; align-items: center; gap: 10px; }
+      .f-count { font-size: 0.72rem; font-weight: 500; color: var(--dim2); min-width: 44px; text-align: center; }
+
+      .nbtn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 5px 16px; border-radius: 20px; cursor: pointer;
+        font-size: 0.78rem; font-weight: 600; font-family: inherit;
+        transition: border-color 0.2s, color 0.2s, background 0.2s;
+      }
+      .nbtn:hover { border-color: var(--teal); color: var(--teal); }
+      .nbtn.p { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .nbtn.p:hover { background: var(--teal-dk); }
+
+      /* ─── TYPOGRAPHY ─── */
+      .eyebrow {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--teal); margin-bottom: 16px;
+      }
+      .hero {
+        font-size: clamp(3rem, 7vw, 6rem); font-weight: 800;
+        line-height: 1; text-align: center; letter-spacing: -0.03em;
+      }
+      .hero em { font-style: normal; color: var(--gold); }
+      .hero strong { color: var(--teal); }
+      .title {
+        font-size: clamp(1.8rem, 4vw, 3.2rem); font-weight: 700;
+        line-height: 1.1; text-align: center; letter-spacing: -0.02em;
+      }
+      .title em { font-style: normal; color: var(--gold); }
+      .title strong { color: var(--teal); }
+      .subtitle {
+        font-size: clamp(0.95rem, 1.8vw, 1.15rem); font-weight: 400;
+        color: var(--dim); line-height: 1.7; text-align: center;
+      }
+      .subtitle strong { color: var(--white); font-weight: 600; }
+
+      /* ─── GLASS CARD ─── */
+      .gc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 20px; padding: 28px 40px;
+        backdrop-filter: blur(8px); width: 100%; max-width: 920px;
+      }
+      .gc-sm { max-width: 640px; }
+      .gc-md { max-width: 780px; }
+
+      /* ─── DIVIDER ─── */
+      .line {
+        width: 40px; height: 2px; background: var(--gold);
+        border-radius: 1px; margin: 14px auto;
+      }
+
+      /* ─── GRID ─── */
+      .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 960px; }
+      .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; width: 100%; max-width: 1000px; }
+
+      /* ─── OP CARD ─── */
+      .oc {
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 16px; padding: 20px 18px; text-align: center;
+        transition: transform 0.25s, background 0.25s, border-color 0.25s;
+      }
+      .oc:hover { transform: translateY(-4px); background: var(--glass-b); }
+      .oc .sym { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+      .oc .nm { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: var(--white); }
+      .oc .ds { font-size: 0.78rem; color: var(--dim); line-height: 1.55; }
+
+      /* ─── CALLOUT ─── */
+      .callout {
+        border-left: 2px solid var(--teal); padding: 12px 18px; margin-top: 16px;
+        font-size: 0.88rem; color: var(--dim);
+        background: rgba(0,163,184,0.06); border-radius: 0 8px 8px 0;
+      }
+      .callout strong { color: var(--white); }
+      .callout-gold { border-left: 2px solid var(--gold); background: rgba(200,149,42,0.06); }
+      .callout-red { border-left: 2px solid var(--false-c); background: rgba(255,92,92,0.06); }
+
+      /* ─── CODE ─── */
+      .code {
+        background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 22px;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+        font-size: clamp(0.7rem, 1.3vw, 0.84rem);
+        white-space: pre; text-align: left; color: #a8d8e4;
+        line-height: 1.65; width: 100%;
+      }
+      .code-bad { border-color: rgba(255,92,92,0.3); box-shadow: 0 0 0 1px rgba(255,92,92,0.1); }
+      .code-good { border-color: rgba(52,210,122,0.3); box-shadow: 0 0 0 1px rgba(52,210,122,0.1); }
+      .kw  { color: #7ec8e3; }
+      .str { color: #a8d8b0; }
+      .op  { color: var(--gold-lt); }
+      .cm  { color: #4a6a74; }
+      .ann { color: #c3a6ff; }
+
+      /* ─── PILL ─── */
+      .pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+      .pt { background: rgba(52,210,122,0.12); color: var(--true-c); border: 1px solid rgba(52,210,122,0.25); }
+      .pf { background: rgba(255,92,92,0.12); color: var(--false-c); border: 1px solid rgba(255,92,92,0.25); }
+      .pa { background: rgba(0,163,184,0.12); color: var(--teal); border: 1px solid rgba(0,163,184,0.25); }
+      .pg { background: rgba(200,149,42,0.12); color: var(--gold-lt); border: 1px solid rgba(200,149,42,0.25); }
+
+      /* ─── STEP LIST ─── */
+      .step {
+        display: flex; align-items: flex-start; gap: 14px;
+        padding: 13px 0; border-bottom: 1px solid var(--border);
+      }
+      .step:last-child { border: none; }
+      .sn {
+        min-width: 30px; height: 30px; border-radius: 50%;
+        background: rgba(0,163,184,0.15); border: 1px solid rgba(0,163,184,0.3);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.82rem; color: var(--teal); flex-shrink: 0;
+      }
+      .sn-red { background: rgba(255,92,92,0.12); border-color: rgba(255,92,92,0.3); color: var(--false-c); }
+      .sn-green { background: rgba(52,210,122,0.12); border-color: rgba(52,210,122,0.3); color: var(--true-c); }
+
+      /* ─── QUIZ ─── */
+      .qopt {
+        width: 100%; text-align: left; background: var(--glass); border: 1px solid var(--border);
+        border-radius: 10px; padding: 12px 18px; color: var(--dim);
+        font-size: 0.88rem; font-family: inherit; cursor: pointer; transition: all 0.2s;
+      }
+      .qopt:hover { border-color: var(--teal); color: var(--white); background: rgba(0,163,184,0.08); }
+      .qopt.ok { border-color: var(--true-c); background: rgba(52,210,122,0.1); color: var(--true-c); font-weight: 700; }
+      .qopt.no { border-color: var(--false-c); background: rgba(255,92,92,0.08); color: var(--false-c); }
+
+      /* ─── ICONS ─── */
+      .mi {
+        font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal;
+        font-size: 1.5rem; line-height: 1; letter-spacing: normal; text-transform: none;
+        display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr;
+        -webkit-font-smoothing: antialiased; font-feature-settings: "liga"; vertical-align: middle;
+      }
+      .mi-sm { font-size: 1.1rem; }
+      .mi-lg { font-size: 2rem; }
+      .mi-xl { font-size: 3.5rem; }
+
+      /* ─── SOLID LETTERS ─── */
+      .solid-row {
+        display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+        width: 100%; max-width: 900px; margin: 20px 0;
+      }
+      .solid-card {
+        flex: 1; min-width: 120px; max-width: 160px;
+        background: var(--glass); border: 1px solid var(--border);
+        border-radius: 14px; padding: 16px 12px; text-align: center;
+        transition: transform 0.2s;
+      }
+      .solid-card.highlight {
+        background: rgba(0,163,184,0.1); border-color: var(--teal);
+        box-shadow: 0 0 20px rgba(0,163,184,0.15);
+        transform: translateY(-6px) scale(1.03);
+      }
+      .solid-letter { font-size: 2.4rem; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+      .solid-name { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; color: var(--dim); line-height: 1.4; }
+
+      /* ─── COMPARE BOX ─── */
+      .cmp-box {
+        border-radius: 14px; padding: 18px 20px;
+        border: 1px solid var(--border); background: var(--glass);
+      }
+      .cmp-box .cmp-h {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; margin-bottom: 12px; display: flex;
+        align-items: center; gap: 8px;
+      }
+
+      /* ─── DEBUGGER ─── */
+      .dbg {
+        background: rgba(0,0,0,0.55); border: 1px solid var(--border);
+        border-radius: 14px; overflow: hidden; width: 100%;
+        font-family: "SF Mono","Fira Code","Courier New",monospace;
+      }
+      .dbg-bar {
+        background: rgba(0,163,184,0.07); border-bottom: 1px solid var(--border);
+        padding: 8px 16px; display: flex; align-items: center;
+        justify-content: space-between; gap: 12px;
+      }
+      .dbg-label {
+        font-size: 0.62rem; font-weight: 700; letter-spacing: 2px;
+        text-transform: uppercase; color: var(--teal);
+        font-family: "Inter", sans-serif; display: flex; align-items: center; gap: 8px;
+      }
+      .dbg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: dbgpulse 1.4s ease-in-out infinite; }
+      @keyframes dbgpulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+      .dbg-step-info { font-size: 0.72rem; color: var(--dim2); font-family: "Inter", sans-serif; }
+      .dbg-controls { display: flex; gap: 6px; align-items: center; }
+      .dbg-btn {
+        background: none; border: 1px solid var(--border); color: var(--dim);
+        padding: 4px 13px; border-radius: 6px; cursor: pointer;
+        font-size: 0.75rem; font-weight: 600; font-family: "Inter", sans-serif;
+        transition: all 0.15s; line-height: 1.5;
+      }
+      .dbg-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+      .dbg-btn:disabled { opacity: 0.22; cursor: default; }
+      .dbg-btn.run { background: var(--teal); border-color: var(--teal); color: #fff; }
+      .dbg-btn.run:hover:not(:disabled) { background: var(--teal-dk); }
+      .dbg-code { padding: 8px 0; overflow-x: auto; }
+      .dbg-line { display: flex; align-items: center; min-height: 28px; transition: background 0.22s; }
+      .dbg-line.active { background: rgba(200,149,42,0.13); }
+      .dbg-lnum {
+        width: 38px; text-align: right; padding-right: 14px; font-size: 0.7rem;
+        color: rgba(255,255,255,0.18); flex-shrink: 0; transition: color 0.22s; line-height: 28px;
+      }
+      .dbg-line.active .dbg-lnum { color: var(--gold); }
+      .dbg-arr { width: 18px; flex-shrink: 0; color: var(--gold); font-size: 0.8rem; text-align: center; line-height: 28px; visibility: hidden; }
+      .dbg-line.active .dbg-arr { visibility: visible; }
+      .dbg-content { flex: 1; font-size: clamp(0.7rem, 1.2vw, 0.84rem); color: #a8d8e4; padding-right: 20px; white-space: pre; line-height: 28px; }
+      .dbg-exp {
+        border-top: 1px solid var(--border); background: rgba(200,149,42,0.055);
+        padding: 12px 20px; font-size: 0.86rem; color: var(--dim);
+        min-height: 52px; font-family: "Inter", sans-serif; line-height: 1.6; transition: opacity 0.25s;
+      }
+      .dbg-exp strong { color: var(--white); }
+      .dbg-exp em { color: var(--teal); font-style: normal; }
+      .dbg-dots { display: flex; align-items: center; gap: 5px; }
+      .dbg-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
+      .dbg-dots span.on { background: var(--gold); transform: scale(1.3); }
+
+      /* ─── DEPENDENCY ARROW TABLE ─── */
+      .dep-table { width: 100%; max-width: 820px; border-collapse: collapse; font-size: 0.82rem; }
+      .dep-table th { background: rgba(0,163,184,0.18); color: var(--teal); padding: 10px 14px; text-align: center; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.8px; text-transform: uppercase; }
+      .dep-table td { padding: 9px 14px; text-align: center; border-bottom: 1px solid var(--border); color: var(--dim); }
+      .dep-table tr:hover td { background: var(--glass); }
+      .dep-table td:first-child { text-align: left; font-weight: 600; color: var(--white); }
+      .ck { color: var(--true-c); font-weight: 800; font-size: 1rem; }
+      .xx { color: var(--false-c); font-weight: 800; font-size: 0.9rem; }
+
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 640px) {
+        .g2,.g3 { grid-template-columns: 1fr; }
+        .slide { padding: 20px 16px; }
+        #footer { padding: 0 16px; }
+        .f-bar { margin: 0 12px; }
+        .solid-row { gap: 6px; }
+        .solid-card { min-width: 90px; }
+        .solid-letter { font-size: 1.8rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cur-glow"></div>
+    <div id="cur-ring"></div>
+    <div id="cur-dot"></div>
+    <div id="prog"></div>
+
+    <div id="deck">
+
+      <!-- ══════════ S1 — CAPA ══════════ -->
+      <div class="slide active" id="s1">
+        <div class="eyebrow">Engenharia de Software · SOLID</div>
+        <span class="mi" style="font-size:5rem;color:var(--teal);margin-bottom:20px">swap_vert</span>
+        <h1 class="hero">Princípio de<br /><em>Inversão</em><br /><strong>de Dependências</strong></h1>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:480px;margin-top:10px">
+          <strong>Dependency Inversion Principle</strong> — o "D" do SOLID<br/>
+          Dependa de <strong>abstrações</strong>, nunca de implementações concretas.
+        </p>
+      </div>
+
+      <!-- ══════════ S2 — SOLID ══════════ -->
+      <div class="slide" id="s2">
+        <div class="eyebrow">Contexto</div>
+        <h2 class="title">O que é <strong>SOLID</strong>?</h2>
+        <div class="line"></div>
+        <p class="subtitle" style="max-width:600px;margin-bottom:20px">
+          SOLID é um conjunto de <strong>5 princípios</strong> para escrever código orientado a objetos
+          mais fácil de manter, extender e entender.
+        </p>
+        <div class="solid-row">
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">S</div>
+            <div class="solid-name">Single<br/>Responsibility</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">O</div>
+            <div class="solid-name">Open-Closed<br/>Principle</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">L</div>
+            <div class="solid-name">Liskov<br/>Substitution</div>
+          </div>
+          <div class="solid-card">
+            <div class="solid-letter" style="color:var(--dim)">I</div>
+            <div class="solid-name">Interface<br/>Segregation</div>
+          </div>
+          <div class="solid-card highlight">
+            <div class="solid-letter" style="color:var(--teal)">D</div>
+            <div class="solid-name" style="color:var(--teal);font-weight:800">Dependency<br/>Inversion</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:640px;text-align:center">
+          <span class="mi mi-sm" style="color:var(--teal)">star</span>
+          Hoje focaremos no <strong>Dependency Inversion Principle</strong> — a cola que une todos os outros princípios SOLID.
+        </div>
+      </div>
+
+      <!-- ══════════ S3 — DEFINIÇÃO ══════════ -->
+      <div class="slide" id="s3">
+        <div class="eyebrow">A Definição</div>
+        <h2 class="title">O que diz o <em>DIP</em>?</h2>
+        <div class="line"></div>
+        <div class="gc gc-md" style="margin-bottom:20px">
+          <span class="mi" style="font-size:2.5rem;color:var(--gold);margin-bottom:12px;display:block">format_quote</span>
+          <p style="font-size:1rem;color:var(--white);font-weight:600;line-height:1.65;margin-bottom:6px">
+            "Módulos de alto nível não devem depender de módulos de baixo nível.<br/>
+            Ambos devem depender de abstrações."
+          </p>
+          <p style="font-size:0.88rem;color:var(--dim);line-height:1.65;margin-bottom:10px">
+            "Abstrações não devem depender de detalhes.<br/>
+            Detalhes devem depender de abstrações."
+          </p>
+          <p style="font-size:0.78rem;color:var(--dim)">— Robert C. Martin</p>
+        </div>
+        <div class="g2" style="max-width:780px">
+          <div class="oc" style="border-color:rgba(255,92,92,0.3)">
+            <div class="sym">🏗️</div>
+            <div class="nm" style="color:var(--false-c)">Acoplamento Rígido</div>
+            <div class="ds">Regras de negócio criam suas próprias dependências com <code style="color:var(--teal)">new</code>. Trocar banco = alterar negócio.</div>
+          </div>
+          <div class="oc" style="border-color:rgba(52,210,122,0.3)">
+            <div class="sym">🔌</div>
+            <div class="nm" style="color:var(--true-c)">Inversão via Abstrações</div>
+            <div class="ds">Negócio depende de interfaces. Infraestrutura implementa essas interfaces. Troca é cirurgia zero.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S4 — O PROBLEMA ══════════ -->
+      <div class="slide" id="s4">
+        <div class="eyebrow">O Problema</div>
+        <h2 class="title">O <em>new</em> que acopla 🔗</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px;align-items:start">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Acoplamento Rígido — PROBLEMA</p>
+            <div class="code code-bad"><span class="kw">class</span> <span class="op">PedidoService</span> {
+
+    <span class="cm">// Acoplado: cria as dependências com "new"</span>
+    <span class="kw">private final</span> MySQLPedidoDB   db
+        = <span class="kw">new</span> <span class="op">MySQLPedidoDB</span>();
+    <span class="kw">private final</span> JavaMailSender  mail
+        = <span class="kw">new</span> <span class="op">JavaMailSender</span>();
+
+    <span class="kw">public void</span> criarPedido(<span class="kw">String</span> id, <span class="kw">double</span> val) {
+        db.save(id, val);   <span class="cm">// MySQL hardcoded</span>
+        mail.send(id, val); <span class="cm">// JavaMail hardcoded</span>
+    }
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Consequências imediatas</p>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="callout callout-red">
+                <strong>Trocar MySQL → PostgreSQL</strong><br/>
+                <span style="font-size:0.82rem">Exige abrir e alterar <em>PedidoService</em>. Regra de negócio muda por razão técnica.</span>
+              </div>
+              <div class="callout callout-red">
+                <strong>Testar PedidoService</strong><br/>
+                <span style="font-size:0.82rem">Precisa de MySQL real + servidor SMTP. Sem banco, sem teste.</span>
+              </div>
+              <div class="callout callout-red">
+                <strong>Adicionar SendGrid</strong><br/>
+                <span style="font-size:0.82rem">Exige <code style="color:var(--teal)">if (provider == "sendgrid")</code> dentro do serviço de negócio.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S5 — ALTO vs BAIXO NÍVEL ══════════ -->
+      <div class="slide" id="s5">
+        <div class="eyebrow">Conceito Central</div>
+        <h2 class="title">Alto nível <em>vs.</em> Baixo nível</h2>
+        <div class="line"></div>
+        <table class="dep-table" style="margin-bottom:18px">
+          <thead>
+            <tr>
+              <th>Módulo</th>
+              <th>Nível</th>
+              <th>Muda quando…</th>
+              <th>Exemplos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PedidoService</td>
+              <td><span class="pill pa">Alto</span></td>
+              <td style="color:var(--dim);font-size:0.8rem">Regra de negócio muda</td>
+              <td style="color:var(--dim);font-size:0.8rem">Use cases, Services, Domain</td>
+            </tr>
+            <tr>
+              <td>MySQLPedidoDB</td>
+              <td><span class="pill pf">Baixo</span></td>
+              <td style="color:var(--dim);font-size:0.8rem">Tecnologia de banco muda</td>
+              <td style="color:var(--dim);font-size:0.8rem">Repositories, Clients, Adapters</td>
+            </tr>
+            <tr>
+              <td>JavaMailSender</td>
+              <td><span class="pill pf">Baixo</span></td>
+              <td style="color:var(--dim);font-size:0.8rem">Biblioteca de email muda</td>
+              <td style="color:var(--dim);font-size:0.8rem">Email, SMS, Push providers</td>
+            </tr>
+            <tr>
+              <td>LDAPProvider</td>
+              <td><span class="pill pf">Baixo</span></td>
+              <td style="color:var(--dim);font-size:0.8rem">Provedor de identidade muda</td>
+              <td style="color:var(--dim);font-size:0.8rem">LDAP, OAuth2, API interna</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-gold" style="max-width:780px">
+          <span class="mi mi-sm" style="color:var(--gold)">lightbulb</span>
+          <strong>Regra prática:</strong> se o nome da classe referencia uma tecnologia (MySQL, SMTP, S3, iText), é um módulo de <em>baixo nível</em>. Nunca instancie-o dentro do alto nível.
+        </div>
+      </div>
+
+      <!-- ══════════ S6 — A INVERSÃO ══════════ -->
+      <div class="slide" id="s6">
+        <div class="eyebrow">A Inversão</div>
+        <h2 class="title">Quem define a <em>interface</em>?</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px;align-items:start">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Sem DIP — Infraestrutura manda</p>
+            <div class="code code-bad"><span class="cm">// MySQLPedidoDB define a API</span>
+<span class="kw">class</span> <span class="op">MySQLPedidoDB</span> {
+    <span class="kw">void</span> save(Pedido p) { ... }
+    Pedido findById(String id) { ... }
+}
+
+<span class="cm">// PedidoService adapta para usar</span>
+<span class="kw">class</span> <span class="op">PedidoService</span> {
+    <span class="kw">private final</span> MySQLPedidoDB db
+        = <span class="kw">new</span> <span class="op">MySQLPedidoDB</span>();
+    <span class="cm">// acoplado ao método e nome da classe MySQL</span>
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">Com DIP — Domínio manda</p>
+            <div class="code code-good"><span class="cm">// PedidoService define o contrato</span>
+<span class="kw">interface</span> <span class="op">PedidoRepository</span> {
+    <span class="kw">void</span> salvar(Pedido p);
+    Optional&lt;Pedido&gt; findById(<span class="kw">String</span> id);
+}
+
+<span class="cm">// MySQLPedidoDB implementa o contrato</span>
+<span class="kw">class</span> <span class="op">MySQLPedidoRepository</span>
+    <span class="kw">implements</span> PedidoRepository { ... }
+
+<span class="cm">// O domínio manda. A infra obedece.</span></div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:880px">
+          <span class="mi mi-sm" style="color:var(--teal)">swap_vert</span>
+          <strong>A "inversão"</strong>: antes, negócio se adaptava à infraestrutura. Com DIP, a <strong>infraestrutura se adapta ao negócio</strong>.
+        </div>
+      </div>
+
+      <!-- ══════════ S7 — DEBUGGER ══════════ -->
+      <div class="slide" id="s7">
+        <div class="eyebrow">Debugger Interativo</div>
+        <h2 class="title" style="margin-bottom:12px">Injeção pelo <em>Construtor</em></h2>
+        <div id="dbg-0" style="width:100%;max-width:860px"></div>
+      </div>
+
+      <!-- ══════════ S8 — SOLUÇÃO: DI ══════════ -->
+      <div class="slide" id="s8">
+        <div class="eyebrow">A Solução</div>
+        <h2 class="title"><em>Injeção</em> de Dependências 💉</h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px;align-items:start">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">Abstrações + Injeção — SOLUÇÃO</p>
+            <div class="code code-good"><span class="cm">// 1. Defina a abstração no domínio</span>
+<span class="kw">interface</span> <span class="op">PedidoRepository</span> {
+    <span class="kw">void</span> salvar(Pedido p);
+}
+<span class="kw">interface</span> <span class="op">EmailService</span> {
+    <span class="kw">void</span> enviar(<span class="kw">String</span> dest, <span class="kw">String</span> msg);
+}
+
+<span class="cm">// 2. Injete pelo construtor</span>
+<span class="kw">class</span> <span class="op">PedidoService</span> {
+    <span class="kw">private final</span> PedidoRepository repo;
+    <span class="kw">private final</span> EmailService email;
+
+    <span class="kw">public</span> PedidoService(
+            PedidoRepository repo,
+            EmailService email) {
+        <span class="kw">this</span>.repo  = repo;
+        <span class="kw">this</span>.email = email;
+    }
+}</div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">Composição no main (ou framework)</p>
+            <div class="code code-good"><span class="cm">// Produção: MySQL + JavaMail</span>
+PedidoService svcProd = <span class="kw">new</span> PedidoService(
+    <span class="kw">new</span> <span class="op">MySQLPedidoRepository</span>(),
+    <span class="kw">new</span> <span class="op">JavaMailEmailService</span>()
+);
+
+<span class="cm">// Teste: InMemory + stub silencioso</span>
+PedidoService svcTest = <span class="kw">new</span> PedidoService(
+    <span class="kw">new</span> <span class="op">InMemoryPedidoRepository</span>(),
+    (dest, msg) -> {} <span class="cm">// lambda mudo</span>
+);
+
+<span class="cm">// PedidoService não muda — só a composição</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S9 — FORMAS DE INJEÇÃO ══════════ -->
+      <div class="slide" id="s9">
+        <div class="eyebrow">Técnicas</div>
+        <h2 class="title">Formas de <em>Injeção</em></h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <div class="step">
+            <div class="sn sn-green">1</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Injeção pelo Construtor <span class="pill pt">Recomendada</span></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Dependências obrigatórias e <code style="color:var(--teal)">final</code>. Objeto nunca criado em estado inválido. Dependências visíveis na assinatura.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn" style="color:var(--gold-lt);background:rgba(200,149,42,0.12);border-color:rgba(200,149,42,0.3)">2</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Injeção por Setter <span class="pill pg">Para opcionais</span></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Para dependências verdadeiramente opcionais ou configuráveis após construção. Requer cuidado com nulos.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">✗</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Service Locator <span class="pill pf">Anti-pattern</span></p>
+              <p style="font-size:0.82rem;color:var(--dim)">Parece DIP mas esconde dependências dentro dos métodos. Difícil de testar. Erros só em runtime. Prefira construtor sempre.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn">🌱</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">IoC Container (Spring, Quarkus)</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Framework realiza a composição automaticamente via <code style="color:var(--teal)">@Autowired</code>, <code style="color:var(--teal)">@Inject</code>. O princípio é o mesmo — o construtor ainda declara as abstrações.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S10 — LAYERED ARCHITECTURE ══════════ -->
+      <div class="slide" id="s10">
+        <div class="eyebrow">Arquitetura</div>
+        <h2 class="title">DIP em <em>camadas</em></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px;align-items:start">
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--false-c);text-transform:uppercase;margin-bottom:8px">Arquitetura em Camadas — SEM DIP</p>
+            <div class="code code-bad" style="font-size:0.75rem">Controller
+  └── cria PedidoService
+        └── cria MySQLRepository   <span class="cm">// ← acoplado</span>
+              └── new Connection()  <span class="cm">// ← acoplado</span>
+
+<span class="cm">// Seta sempre aponta para baixo e para concreto</span>
+<span class="cm">// Trocar MySQL = alterar TODAS as camadas acima</span></div>
+          </div>
+          <div>
+            <p style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:var(--true-c);text-transform:uppercase;margin-bottom:8px">Arquitetura Hexagonal — COM DIP</p>
+            <div class="code code-good" style="font-size:0.75rem">Controller
+  └── depende de PedidoUseCase      <span class="cm">// interface</span>
+        └── PedidoUseCaseImpl
+              └── depende de PedidoRepository <span class="cm">// interface</span>
+                    └── MySQLPedidoRepository
+                          └── implements PedidoRepository
+
+<span class="cm">// Setas apontam para interfaces (abstrações)</span>
+<span class="cm">// Trocar MySQL = criar novo impl, zero mudança acima</span></div>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:880px">
+          <span class="mi mi-sm" style="color:var(--gold)">hub</span>
+          Na <strong>Arquitetura Hexagonal</strong> (Ports &amp; Adapters), as <em>ports</em> são as interfaces definidas pelo domínio — DIP estrutural.
+        </div>
+      </div>
+
+      <!-- ══════════ S11 — SINAIS DE VIOLAÇÃO ══════════ -->
+      <div class="slide" id="s11">
+        <div class="eyebrow">Como Identificar</div>
+        <h2 class="title">Sinais de <em>Violação</em> do DIP</h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <div class="step">
+            <div class="sn sn-red">1</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px"><code style="color:var(--teal)">new MySQLAlgo()</code> dentro de uma classe de negócio</p>
+              <p style="font-size:0.82rem;color:var(--dim)">O <code style="color:var(--teal)">new</code> cementa a dependência. Se está dentro do construtor com <code style="color:var(--teal)">= new X()</code>, há acoplamento.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">2</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Import de pacote de infra em camada de domínio</p>
+              <p style="font-size:0.82rem;color:var(--dim)"><code style="color:var(--teal)">import com.mysql.*</code> ou <code style="color:var(--teal)">import org.springframework.mail.*</code> dentro de um Service de negócio — red flag.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">3</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Testes de negócio precisam de banco ou SMTP real</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Se não é possível testar a lógica sem infraestrutura real, o DIP foi violado — as dependências não são substituíveis.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">4</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Trocar tecnologia exige alterar regra de negócio</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Se migrar de LDAP para OAuth2 força abrir e editar <em>AutenticacaoService</em>, o DIP está sendo violado.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="sn sn-red">5</div>
+            <div>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white);margin-bottom:4px">Service Locator — dependências ocultas nos métodos</p>
+              <p style="font-size:0.82rem;color:var(--dim)">Quando as dependências não estão no construtor mas são buscadas dentro dos métodos, elas ficam invisíveis e difíceis de substituir em testes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ S12 — DIP E OS OUTROS PRINCÍPIOS ══════════ -->
+      <div class="slide" id="s12">
+        <div class="eyebrow">Conexões</div>
+        <h2 class="title">DIP e os outros <strong>SOLID</strong></h2>
+        <div class="line"></div>
+        <div class="g2" style="max-width:960px">
+          <div class="oc" style="border-color:rgba(0,163,184,0.3)">
+            <div class="sym" style="color:var(--teal)">S</div>
+            <div class="nm">SRP</div>
+            <div class="ds">Cada interface injetada tem <strong>uma responsabilidade</strong> — <em>PedidoRepository</em> só persiste pedidos. Coesão guia a definição das abstrações.</div>
+          </div>
+          <div class="oc" style="border-color:rgba(0,163,184,0.3)">
+            <div class="sym" style="color:var(--teal)">O</div>
+            <div class="nm">OCP</div>
+            <div class="ds">Adicionar <em>SendGridEmailService</em> <strong>não modifica</strong> <em>PedidoService</em>. DIP torna o OCP possível na prática.</div>
+          </div>
+          <div class="oc" style="border-color:rgba(0,163,184,0.3)">
+            <div class="sym" style="color:var(--teal)">L</div>
+            <div class="nm">LSP</div>
+            <div class="ds">Implementações injetadas devem ser <strong>substituíveis</strong> sem surpresas. Se <em>PostgreSQLRepository</em> quebra o contrato, o DIP não funciona.</div>
+          </div>
+          <div class="oc" style="border-color:rgba(0,163,184,0.3)">
+            <div class="sym" style="color:var(--teal)">I</div>
+            <div class="nm">ISP</div>
+            <div class="ds">Interfaces injetadas devem ser <strong>pequenas e coesas</strong>. Injetar uma interface gorda viola ISP e torna o DIP mais frágil.</div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:880px;margin-top:16px">
+          <span class="mi mi-sm" style="color:var(--teal)">link</span>
+          DIP é o <strong>princípio conector</strong>: os outros quatro definem como as peças devem ser — o DIP garante que elas se encaixem via abstrações.
+        </div>
+      </div>
+
+      <!-- ══════════ S13 — QUIZ ══════════ -->
+      <div class="slide" id="s13">
+        <div class="eyebrow">Prática</div>
+        <h2 class="title">Quiz — <em>DIP</em></h2>
+        <div class="line"></div>
+        <div class="gc gc-md">
+          <p style="font-size:0.95rem;color:var(--white);font-weight:600;margin-bottom:6px">
+            Uma classe <code style="color:var(--teal)">RelatorioService</code> tem o campo
+            <code style="color:var(--teal)">private final ITextPDF pdf = new ITextPDF()</code>.
+            O time quer trocar <code style="color:var(--teal)">ITextPDF</code> por <code style="color:var(--teal)">PDFBox</code>.
+            O que precisa acontecer?
+          </p>
+          <p style="font-size:0.82rem;color:var(--dim);margin-bottom:18px">Selecione a alternativa correta:</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="qopt" onclick="qz(this,false)">A) Nada — é só instanciar PDFBox onde ITextPDF está sendo usado</button>
+            <button class="qopt" onclick="qz(this,false)">B) Criar uma subclasse de RelatorioService que sobrescreve o campo</button>
+            <button class="qopt" onclick="qz(this,true)">C) Criar interface DocumentoGenerator, fazer PDFBox implementá-la, injetar no construtor de RelatorioService</button>
+            <button class="qopt" onclick="qz(this,false)">D) Adicionar um if dentro de RelatorioService para escolher entre ITextPDF e PDFBox</button>
+          </div>
+          <div id="qfb" style="margin-top:14px;font-size:0.88rem;min-height:24px"></div>
+        </div>
+      </div>
+
+      <!-- ══════════ S14 — RESUMO ══════════ -->
+      <div class="slide" id="s14">
+        <div class="eyebrow">Resumo</div>
+        <h2 class="title" style="margin-bottom:12px"><em>Dependency Inversion</em> em 4 pontos</h2>
+        <div class="g2" style="max-width:860px">
+          <div class="gc" style="padding:22px 26px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span class="mi" style="color:var(--teal)">swap_vert</span>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white)">Dependa de abstrações, não de concretos</p>
+            </div>
+            <p style="font-size:0.82rem;color:var(--dim);line-height:1.6">Declare as dependências como <strong style="color:var(--white)">interfaces</strong> no construtor. Nunca <code style="color:var(--teal)">new MySQLAlgo()</code> dentro de um serviço de negócio.</p>
+          </div>
+          <div class="gc" style="padding:22px 26px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span class="mi" style="color:var(--gold)">domain</span>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white)">O domínio define os contratos</p>
+            </div>
+            <p style="font-size:0.82rem;color:var(--dim);line-height:1.6">A interface <code style="color:var(--teal)">PedidoRepository</code> existe no domínio. O <code style="color:var(--teal)">MySQLPedidoRepository</code> existe na infraestrutura. <strong style="color:var(--white)">A infra obedece ao domínio.</strong></p>
+          </div>
+          <div class="gc" style="padding:22px 26px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span class="mi" style="color:var(--true-c)">science</span>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white)">Testabilidade é consequência direta</p>
+            </div>
+            <p style="font-size:0.82rem;color:var(--dim);line-height:1.6">Com DIP, basta injetar <code style="color:var(--teal)">InMemoryRepository</code> no teste. <strong style="color:var(--white)">Nenhum banco real necessário</strong> para testar lógica de negócio.</p>
+          </div>
+          <div class="gc" style="padding:22px 26px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <span class="mi" style="color:var(--teal)">extension</span>
+              <p style="font-size:0.9rem;font-weight:700;color:var(--white)">Trocar tecnologia sem tocar no negócio</p>
+            </div>
+            <p style="font-size:0.82rem;color:var(--dim);line-height:1.6">MySQL → PostgreSQL: crie nova implementação, altere a composição. <strong style="color:var(--white)">PedidoService não abre, não muda, não quebra.</strong></p>
+          </div>
+        </div>
+        <div class="callout callout-gold" style="max-width:820px;margin-top:16px">
+          <span class="mi mi-sm" style="color:var(--gold)">school</span>
+          Próximo: <strong>Exercícios</strong> — 20 problemas para praticar DIP na prática.
+          Veja <strong>EXERCICIOS.md</strong> e os exemplos em <strong>exemplos/</strong>.
+        </div>
+      </div>
+
+    </div><!-- /#deck -->
+
+    <!-- ══════════ FOOTER ══════════ -->
+    <div id="footer">
+      <div class="f-brand">
+        <div class="f-name">
+          <div class="l1">Engenharia de Software</div>
+          <div class="l2">SOLID · DIP</div>
+        </div>
+        <div class="f-sep"></div>
+        <button class="nbtn" onclick="toggleTheme()" title="Alternar Tema">
+          <span class="mi mi-sm" id="theme-icon">dark_mode</span>
+        </button>
+      </div>
+      <div class="f-bar"></div>
+      <div class="f-nav">
+        <button class="nbtn" id="btn-prev" onclick="go(-1)">
+          <span class="mi mi-sm">chevron_left</span> Anterior
+        </button>
+        <span class="f-count" id="cnt">1 / 14</span>
+        <button class="nbtn p" id="btn-next" onclick="go(1)">
+          Próximo <span class="mi mi-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const N = 14;
+      let cur = 1, busy = false;
+
+      /* ─── TEMA ─── */
+      function toggleTheme() {
+        const isLight = document.body.classList.toggle('light-mode');
+        document.getElementById('theme-icon').textContent = isLight ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      }
+      if (localStorage.getItem('theme') === 'light') toggleTheme();
+
+      /* ─── RENDER ─── */
+      function render() {
+        document.getElementById('cnt').textContent = cur + ' / ' + N;
+        document.getElementById('prog').style.width = ((cur - 1) / (N - 1)) * 100 + '%';
+        document.getElementById('btn-prev').style.opacity = cur === 1 ? '.3' : '1';
+        const nb = document.getElementById('btn-next');
+        if (cur === N) {
+          nb.innerHTML = '↺ Reiniciar';
+          nb.onclick = () => jump(1);
+        } else {
+          nb.innerHTML = 'Próximo <span class="mi mi-sm">chevron_right</span>';
+          nb.onclick = () => go(1);
+        }
+      }
+
+      /* ─── NAVEGAÇÃO ─── */
+      const ANIM_DUR = 560;
+      function clearAnims(el) {
+        el.classList.remove('active','anim-exit-fwd','anim-exit-bwd','anim-enter-fwd','anim-enter-bwd');
+        el.style.cssText = '';
+      }
+      function go(dir) {
+        if (busy) return;
+        const nxt = cur + dir;
+        if (nxt < 1 || nxt > N) return;
+        busy = true;
+        const ce = document.getElementById('s' + cur);
+        const ne = document.getElementById('s' + nxt);
+        ce.classList.remove('active');
+        ce.classList.add(dir > 0 ? 'anim-exit-fwd' : 'anim-exit-bwd');
+        ne.style.opacity = '0';
+        ne.style.pointerEvents = 'none';
+        setTimeout(() => {
+          ne.style.opacity = '';
+          ne.classList.add(dir > 0 ? 'anim-enter-fwd' : 'anim-enter-bwd');
+        }, 40);
+        setTimeout(() => {
+          clearAnims(ce); ce.style.opacity = '0'; ce.style.pointerEvents = 'none';
+          clearAnims(ne); ne.classList.add('active');
+          busy = false;
+        }, ANIM_DUR + 40);
+        cur = nxt; render();
+      }
+      function jump(n) {
+        const ce = document.getElementById('s' + cur);
+        clearAnims(ce); ce.style.opacity = '0'; ce.style.pointerEvents = 'none';
+        cur = n;
+        const ne = document.getElementById('s' + cur);
+        clearAnims(ne); ne.classList.add('active');
+        render();
+      }
+      document.addEventListener('keydown', (e) => {
+        if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); go(1); }
+        if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); go(-1); }
+      });
+
+      /* ─── QUIZ ─── */
+      function qz(btn, ok) {
+        document.querySelectorAll('.qopt').forEach(o => o.disabled = true);
+        btn.classList.add(ok ? 'ok' : 'no');
+        document.getElementById('qfb').innerHTML = ok
+          ? '<span style="color:var(--true-c)">✓ Correto! A solução DIP: definir a abstração (interface), fazer a nova implementação respeitar o contrato, injetar pelo construtor. RelatorioService não precisa mudar uma linha.</span>'
+          : '<span style="color:var(--false-c)">✗ Não é o caminho DIP. Alternativas A e D mantêm acoplamento. Alternativa B viola o princípio ao usar herança para contornar o problema de design. A resposta correta é C.</span>';
+      }
+
+      /* ─── DEBUGGER ─── */
+      const DBG_DATA = [
+        {
+          lines: [
+            `<span class="kw">interface</span> <span class="op">PedidoRepository</span> { <span class="kw">void</span> salvar(Pedido p); }`,
+            `<span class="kw">interface</span> <span class="op">EmailService</span> { <span class="kw">void</span> enviar(<span class="kw">String</span> dest, <span class="kw">String</span> msg); }`,
+            ``,
+            `<span class="kw">class</span> <span class="op">PedidoService</span> {`,
+            `    <span class="kw">private final</span> PedidoRepository repo;`,
+            `    <span class="kw">private final</span> EmailService email;`,
+            `    <span class="kw">public</span> PedidoService(PedidoRepository r, EmailService e) {`,
+            `        <span class="kw">this</span>.repo = r; <span class="kw">this</span>.email = e;`,
+            `    }`,
+            `    <span class="kw">public void</span> criarPedido(<span class="kw">String</span> id, <span class="kw">double</span> val) {`,
+            `        repo.salvar(<span class="kw">new</span> Pedido(id, val)); <span class="cm">// abstracao ✓</span>`,
+            `        email.enviar(id, <span class="str">"Pedido confirmado"</span>); <span class="cm">// abstracao ✓</span>`,
+            `    }`,
+            `}`,
+            `<span class="cm">// Composição — único lugar com "new" de infraestrutura</span>`,
+            `PedidoService svc = <span class="kw">new</span> PedidoService(`,
+            `    <span class="kw">new</span> <span class="op">MySQLPedidoRepository</span>(),`,
+            `    <span class="kw">new</span> <span class="op">JavaMailEmailService</span>()`,
+            `);`,
+          ],
+          steps: [
+            { line: 0,  exp: `<strong>Interface PedidoRepository</strong> é definida pelo domínio — é o contrato que a infraestrutura precisa honrar.` },
+            { line: 1,  exp: `<strong>Interface EmailService</strong> — outro contrato do domínio. O domínio não sabe se é JavaMail, SendGrid ou qualquer outro.` },
+            { line: 4,  exp: `<em>PedidoRepository</em> declarado como <strong>final</strong> — imutável após construção. A interface garante que podemos trocar sem alterar o serviço.` },
+            { line: 5,  exp: `<em>EmailService</em> também <strong>final</strong> e tipado pela interface. PedidoService não conhece JavaMail nem SendGrid — só o contrato.` },
+            { line: 6,  exp: `Construtor recebe as implementações <strong>de fora</strong>. Quem chama decide qual usar — inversão de controle em ação.` },
+            { line: 10, exp: `<em>repo.salvar()</em> chama a abstração. Em produção executa MySQL; em teste executa InMemory. <strong>PedidoService não sabe a diferença.</strong>` },
+            { line: 11, exp: `<em>email.enviar()</em> chama a abstração. Em produção usa JavaMail; em CI usa um lambda vazio. <strong>Nenhuma linha de PedidoService muda.</strong>` },
+            { line: 15, exp: `<strong>Composição:</strong> aqui, e só aqui, usamos <em>new</em> com classes concretas. Este é o único ponto de acoplamento — isolado e substituível.` },
+          ],
+          cur: 0,
+        },
+      ];
+
+      function renderDbg(id) {
+        const el = document.getElementById('dbg-' + id);
+        if (!el) return;
+        const d = DBG_DATA[id];
+        const step = d.steps[d.cur];
+        const total = d.steps.length;
+        const dots = d.steps.map((_,i) => `<span class="${i===d.cur?'on':''}"></span>`).join('');
+        const linesHTML = d.lines.map((content, i) => {
+          const active = i === step.line;
+          return `<div class="dbg-line${active?' active':''}">
+            <div class="dbg-lnum">${i+1}</div>
+            <div class="dbg-arr">▶</div>
+            <div class="dbg-content">${content}</div>
+          </div>`;
+        }).join('');
+        el.innerHTML = `
+          <div class="dbg-bar">
+            <div class="dbg-label">
+              <div class="dbg-dot"></div>
+              DEBUGGER
+              <div class="dbg-dots">${dots}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="dbg-step-info">Passo ${d.cur+1} / ${total}</span>
+              <div class="dbg-controls">
+                <button class="dbg-btn" onclick="dbgStep(${id},-1)" ${d.cur===0?'disabled':''}>◀ Anterior</button>
+                <button class="dbg-btn run" onclick="dbgStep(${id},1)" ${d.cur===total-1?'disabled':''}>Próxima ▶</button>
+              </div>
+            </div>
+          </div>
+          <div class="dbg-code">${linesHTML}</div>
+          <div class="dbg-exp">💬 &nbsp;${step.exp}</div>`;
+      }
+
+      function dbgStep(id, dir) {
+        const d = DBG_DATA[id];
+        const nxt = d.cur + dir;
+        if (nxt < 0 || nxt >= d.steps.length) return;
+        d.cur = nxt;
+        renderDbg(id);
+      }
+
+      /* ─── CURSOR ─── */
+      const dot = document.getElementById('cur-dot');
+      const ring = document.getElementById('cur-ring');
+      const glow = document.getElementById('cur-glow');
+      let mx = 0, my = 0, rx = 0, ry = 0, gx = 0, gy = 0;
+      document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+      document.addEventListener('mousedown', () => document.body.classList.add('cur-click'));
+      document.addEventListener('mouseup',   () => document.body.classList.remove('cur-click'));
+      document.querySelectorAll('a,button,.oc,.solid-card,.qopt,.nbtn,.dbg-btn').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('cur-hover'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cur-hover'));
+      });
+      (function loop() {
+        dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+        rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+        ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+        gx += (mx - gx) * 0.06; gy += (my - gy) * 0.06;
+        glow.style.left = gx + 'px'; glow.style.top = gy + 'px';
+        requestAnimationFrame(loop);
+      })();
+
+      /* ─── INIT ─── */
+      render();
+      renderDbg(0);
+    </script>
+  </body>
+</html>
